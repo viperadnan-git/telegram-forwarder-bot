@@ -1,7 +1,6 @@
 import { BotContext } from "../bot";
 import { ChatFromGetChat } from "grammy/types";
 import db from "../database";
-import { parseEntity } from "../modules/utils";
 
 export default async function set_owner_handler(ctx: BotContext) {
     const owner = await db.getOwner(ctx.me.id);
@@ -14,11 +13,11 @@ export default async function set_owner_handler(ctx: BotContext) {
     if (ctx.match) {
         let user: ChatFromGetChat;
 
-        const entity = parseEntity(ctx.match as string);
+        const entity = Number(ctx.match);
 
         if (!entity) {
             await ctx.reply(
-                "Invalid user ID or user. I only accept a user id or username."
+                "Invalid user ID or user. I only accept a user id."
             );
             return;
         }
