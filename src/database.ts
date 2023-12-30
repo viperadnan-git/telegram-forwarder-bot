@@ -64,7 +64,6 @@ class Database {
 
     public async remChatMap(botId: number, chatId: number, toChatId?: number) {
         if (toChatId) {
-            console.log("removing", toChatId);
             return await this.client.sRem(
                 `${REDIS_PREFIX}:${botId}:${chatId}`,
                 String(toChatId)

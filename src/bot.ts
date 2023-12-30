@@ -31,6 +31,10 @@ export const botCreator = (token: string) => {
             description: "Start the bot",
         },
         {
+            command: "help",
+            description: "Show help message",
+        },
+        {
             command: "set",
             description: "Set a new chat forwarding",
         },
@@ -41,10 +45,6 @@ export const botCreator = (token: string) => {
         {
             command: "rem",
             description: "Remove a chat forwarding",
-        },
-        {
-            command: "help",
-            description: "Show help message",
         },
         {
             command: "set_owner",

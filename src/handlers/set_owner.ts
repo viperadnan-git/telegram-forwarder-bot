@@ -1,3 +1,5 @@
+import { getEntity, parseEntity } from "../modules/utils";
+
 import { BotContext } from "../bot";
 import { ChatFromGetChat } from "grammy/types";
 import db from "../database";
@@ -11,33 +13,21 @@ export default async function set_owner_handler(ctx: BotContext) {
     }
 
     if (ctx.match) {
-        let user: ChatFromGetChat;
-
-        const entity = Number(ctx.match);
+        const entity = await getEntity(ctx, ctx.match as string);
 
         if (!entity) {
             await ctx.reply(
-                "Invalid user ID or user. I only accept a user id."
+                "Invalid user ID. Make sure the user ID is correct and the user has started a conversation with me."
             );
             return;
         }
 
-        try {
-            user = await ctx.api.getChat(entity);
-            if (!owner) {
-                await db.setOwner(ctx.me.id, user.id);
-                await ctx.reply("Owner set.");
-            } else {
-                await db.setOwner(ctx.me.id, user.id);
-                await ctx.reply("Owner changed.");
-            }
-        } catch (error: any) {
-            if (error.error_code === 400) {
-                await ctx.reply(
-                    "Invalid user ID or user. Make sure the user has started a conversation with me."
-                );
-                return;
-            }
+        if (!owner) {
+            await db.setOwner(ctx.me.id, entity.id);
+            await ctx.reply("Owner set.");
+        } else {
+            await db.setOwner(ctx.me.id, entity.id);
+            await ctx.reply("Owner changed.");
         }
     } else {
         if (owner) {

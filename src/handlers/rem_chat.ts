@@ -12,5 +12,7 @@ export default async function rem_chat_handler(ctx: BotContext) {
 
     const [chatId, toChatId] = match.split(" ", 2).map(Number);
     await db.remChatMap(ctx.me.id, chatId, toChatId);
-    await ctx.reply("Chat removed.");
+    await ctx.reply(
+        `Forwarding is disabled for new messages in chat.\n<pre>${chatId}${toChatId? ' -> ' + toChatId : ''}</pre>`
+    );
 }

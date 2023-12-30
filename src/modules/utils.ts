@@ -1,3 +1,6 @@
+import { BotContext } from "../bot";
+import { ChatFromGetChat } from "grammy/types";
+
 export const formatObject = (obj: {
     [key: string]: number[] | undefined;
 }): string => {
@@ -21,12 +24,22 @@ export const formatObject = (obj: {
 };
 
 
-export const parseEntity = (text: string): string | number | undefined => {
-    if (text.match(/^\d+$/)) {
+export const parseEntity = (text: string): string | number => {
+    if (!isNaN(Number(text))) {
         return Number(text);
     } else if (text.match(/^@/)) {
-        return text.replace(/^@/, "");
+        return text
     } else {
-        return undefined;
+        return `@${text}`
+    }
+}
+
+export const getEntity = async (ctx: BotContext, chatId: string): Promise<ChatFromGetChat | undefined> => {
+    try {
+        return await ctx.api.getChat(parseEntity(chatId));
+    } catch (error: any) {
+        if (error.error_code === 400) {
+            return;
+        }
     }
 }

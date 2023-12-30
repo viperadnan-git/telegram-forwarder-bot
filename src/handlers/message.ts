@@ -16,10 +16,14 @@ export default async function message_handler(ctx: BotContext) {
     );
 
     for (const chatId of chatIds) {
-        await ctx.api.copyMessage(
-            chatId,
-            fromChatId,
-            message?.message_id as number
-        );
+        try {
+            await ctx.api.copyMessage(
+                chatId,
+                fromChatId,
+                message?.message_id as number
+            );
+        } catch (error: any) {
+            logger.warn(`Error when forwarding message (${message?.message_id}) from ${fromChatId} to ${chatId}: ${error.description || error.message}`);
+        }
     }
 }
