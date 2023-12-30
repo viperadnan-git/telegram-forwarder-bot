@@ -18,7 +18,9 @@ function extractBotToken(msgText: string, entities: Array<MessageEntity>) {
 
 export default async function bot_token_handler(ctx: BotContext) {
     if (!WEBHOOK_HOST) {
-        await ctx.reply("I am a bot too!");
+        await ctx.reply(
+            "Cloning bots is not configured. Please contact the bot owner."
+        );
         return;
     }
 

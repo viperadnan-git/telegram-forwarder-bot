@@ -23,7 +23,13 @@ export default async function message_handler(ctx: BotContext) {
                 message?.message_id as number
             );
         } catch (error: any) {
-            logger.warn(`Error when forwarding message (${message?.message_id}) from ${fromChatId} to ${chatId}: ${error.description || error.message}`);
+            logger.warn(
+                `Error when forwarding message (${
+                    message?.message_id
+                }) from ${fromChatId} to ${chatId}: ${
+                    error.description || error.message
+                }`
+            );
         }
     }
 }

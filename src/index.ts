@@ -41,7 +41,7 @@ db.connect().then(() => {
 
         if (!WEBHOOK_HOST) {
             logger.warn(
-                "WEBHOOK_HOST is not set. Set it manually if you want to use webhooks."
+                "WEBHOOK_HOST is not set. Cloning feature won't work. Set it manually if you want to use webhooks."
             );
         } else {
             if (process.env.BOT_TOKEN) {

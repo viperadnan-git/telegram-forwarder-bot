@@ -42,5 +42,7 @@ export default async function set_chat_handler(ctx: BotContext) {
 
     await db.setChatMap(botId, chadIdEntity.id, toChatIdEntity.id);
 
-    await ctx.reply(`Forwarding is enabled for new messages in chat.\n<pre>${chadIdEntity.id} -> ${toChatIdEntity.id}</pre>`);
+    await ctx.reply(
+        `Forwarding is enabled for new messages in chat.\n<pre>${chadIdEntity.id} -> ${toChatIdEntity.id}</pre>`
+    );
 }

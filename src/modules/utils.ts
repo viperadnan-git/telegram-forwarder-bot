@@ -23,18 +23,20 @@ export const formatObject = (obj: {
     return text;
 };
 
-
 export const parseEntity = (text: string): string | number => {
     if (!isNaN(Number(text))) {
         return Number(text);
     } else if (text.match(/^@/)) {
-        return text
+        return text;
     } else {
-        return `@${text}`
+        return `@${text}`;
     }
-}
+};
 
-export const getEntity = async (ctx: BotContext, chatId: string): Promise<ChatFromGetChat | undefined> => {
+export const getEntity = async (
+    ctx: BotContext,
+    chatId: string
+): Promise<ChatFromGetChat | undefined> => {
     try {
         return await ctx.api.getChat(parseEntity(chatId));
     } catch (error: any) {
@@ -42,4 +44,4 @@ export const getEntity = async (ctx: BotContext, chatId: string): Promise<ChatFr
             return;
         }
     }
-}
+};

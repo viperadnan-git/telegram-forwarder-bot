@@ -69,7 +69,9 @@ const privateChat = composer.chatType("private");
 
 privateChat.command("start", wrapper(start_handler));
 privateChat.command(["set_owner", "setowner"], wrapper(set_owner_handler));
-privateChat.command(["help", "settings"]).filter(owner_only, wrapper(help_handler));
+privateChat
+    .command(["help", "settings"])
+    .filter(owner_only, wrapper(help_handler));
 privateChat.command("set").filter(owner_only, wrapper(set_chat_handler));
 privateChat.command("get").filter(owner_only, wrapper(get_chat_handler));
 privateChat.command("rem").filter(owner_only, wrapper(rem_chat_handler));
