@@ -25,6 +25,32 @@ export const botCreator = (token: string) => {
         },
     });
     bot.api.config.use(parseMode("HTML"));
+    bot.api.setMyCommands([
+        {
+            command: "start",
+            description: "Start the bot",
+        },
+        {
+            command: "set",
+            description: "Set a new chat forwarding",
+        },
+        {
+            command: "get",
+            description: "Get a existing setting",
+        },
+        {
+            command: "rem",
+            description: "Remove a chat forwarding",
+        },
+        {
+            command: "help",
+            description: "Show help message",
+        },
+        {
+            command: "set_owner",
+            description: "Set the owner of the bot",
+        },
+    ]);
     bots.set(token, bot);
     bot.use(composer);
     return bot;
@@ -42,8 +68,8 @@ const wrapper =
 const privateChat = composer.chatType("private");
 
 privateChat.command("start", wrapper(start_handler));
-privateChat.command("set_owner", wrapper(set_owner_handler));
-privateChat.command("help").filter(owner_only, wrapper(help_handler));
+privateChat.command(["set_owner", "setowner"], wrapper(set_owner_handler));
+privateChat.command(["help", "settings"]).filter(owner_only, wrapper(help_handler));
 privateChat.command("set").filter(owner_only, wrapper(set_chat_handler));
 privateChat.command("get").filter(owner_only, wrapper(get_chat_handler));
 privateChat.command("rem").filter(owner_only, wrapper(rem_chat_handler));

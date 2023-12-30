@@ -5,7 +5,7 @@ export default async function set_chat_handler(ctx: BotContext) {
     const match = ctx.match as string;
     if (!match) {
         await ctx.reply(
-            "Please specify a from chat id and an optional to chat id.\n\nTo forward from 'from_chat_id to 'to_chat_id' chat\n<pre>/set (from chat_id) (to chat_id)</pre>"
+            "Please specify a from chat id and to chat id.\n\nTo forward from 'from_chat_id to 'to_chat_id' chat\n<pre>/set (from chat_id) (to chat_id)</pre>"
         );
         return;
     }

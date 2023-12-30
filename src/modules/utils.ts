@@ -19,3 +19,14 @@ export const formatObject = (obj: {
 
     return text;
 };
+
+
+export const parseEntity = (text: string): string | number | undefined => {
+    if (text.match(/^\d+$/)) {
+        return Number(text);
+    } else if (text.match(/^@/)) {
+        return text.replace(/^@/, "");
+    } else {
+        return undefined;
+    }
+}

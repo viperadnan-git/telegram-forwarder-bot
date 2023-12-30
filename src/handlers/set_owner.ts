@@ -1,18 +1,43 @@
 import { BotContext } from "../bot";
+import { ChatFromGetChat } from "grammy/types";
 import db from "../database";
+import { parseEntity } from "../modules/utils";
 
 export default async function set_owner_handler(ctx: BotContext) {
     const owner = await db.getOwner(ctx.me.id);
+
+    if (owner && ctx.from?.id !== owner) {
+        await ctx.reply("You are not the owner of this bot.");
+        return;
+    }
+
     if (ctx.match) {
-        if (!owner) {
-            await db.setOwner(ctx.me.id, Number(ctx.match));
-            await ctx.reply("Owner set.");
-        } else {
-            if (ctx.from?.id === owner) {
-                await db.setOwner(ctx.me.id, Number(ctx.match));
-                await ctx.reply("Owner changed.");
+        let user: ChatFromGetChat;
+
+        const entity = parseEntity(ctx.match as string);
+
+        if (!entity) {
+            await ctx.reply(
+                "Invalid user ID or user. I only accept a user id or username."
+            );
+            return;
+        }
+
+        try {
+            user = await ctx.api.getChat(entity);
+            if (!owner) {
+                await db.setOwner(ctx.me.id, user.id);
+                await ctx.reply("Owner set.");
             } else {
-                await ctx.reply("You are not the owner of this bot.");
+                await db.setOwner(ctx.me.id, user.id);
+                await ctx.reply("Owner changed.");
+            }
+        } catch (error: any) {
+            if (error.error_code === 400) {
+                await ctx.reply(
+                    "Invalid user ID or user. Make sure the user has started a conversation with me."
+                );
+                return;
             }
         }
     } else {
