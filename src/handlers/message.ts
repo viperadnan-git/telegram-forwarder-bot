@@ -20,7 +20,10 @@ export default async function message_handler(ctx: BotContext) {
             await ctx.api.copyMessage(
                 chatId,
                 fromChatId,
-                message?.message_id as number
+                message?.message_id as number,
+                {
+                    reply_markup: message?.reply_markup,
+                }
             );
         } catch (error: any) {
             logger.warn(
