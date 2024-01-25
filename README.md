@@ -32,23 +32,13 @@ Configurations are added in environment variables or [`.env.sample`](./.env.samp
 
 ## Deploying
 
-### Deploying on Vercel, Render, Cyclic etc.
+### Deploying on Vercel, Render, Cyclic, Heroku etc.
 
 -   Fork this repository
--   Create a new project
--   Connect your forked repository to the project
+-   Create a new app on the platform you want to deploy
+-   Connect your forked repository to the app
 -   Set environment variables in the project settings
-
-### Running on Replit
-
--   Fork this repository
--   Create a new repl
--   Set environment variables in the secrets section under tools tab
--   Add the following lines to the `.replit` file
-
-```sh
-run = "npm run dev"
-```
+-   (Optional) Set the `PORT` environment variable to the port number provided by the platform or set it to 3000
 
 ### Deploy on VPS or any other server
 
