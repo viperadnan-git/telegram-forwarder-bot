@@ -9,7 +9,7 @@ import { webhookCallback } from "grammy";
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
-const HOST = process.env.HOST || "localhost";
+const HOST = process.env.HOST || process.env.NODE_ENV === "production" ? "0.0.0.0" : "localhost";
 
 app.use(express.json());
 app.use((req, res, next) => {
