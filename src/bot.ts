@@ -21,35 +21,35 @@ export const bots = new Map<string, Bot<BotContext>>();
 export const botCreator = (token: string) => {
     const bot = new Bot<BotContext>(token, {
         client: {
-            canUseWebhookReply: (method) => method === "sendChatAction",
-        },
+            canUseWebhookReply: (method) => method === "sendChatAction"
+        }
     });
     bot.api.config.use(parseMode("HTML"));
     bot.api.setMyCommands([
         {
             command: "start",
-            description: "Start the bot",
+            description: "Start the bot"
         },
         {
             command: "help",
-            description: "Show help message",
+            description: "Show help message"
         },
         {
             command: "set",
-            description: "Set a new chat forwarding",
+            description: "Set a new chat forwarding"
         },
         {
             command: "get",
-            description: "Get a existing setting",
+            description: "Get a existing setting"
         },
         {
             command: "rem",
-            description: "Remove a chat forwarding",
+            description: "Remove a chat forwarding"
         },
         {
             command: "set_owner",
-            description: "Set the owner of the bot",
-        },
+            description: "Set the owner of the bot"
+        }
     ]);
     bots.set(token, bot);
     bot.use(composer);
@@ -69,19 +69,17 @@ const privateChat = composer.chatType("private");
 
 privateChat.command("start", wrapper(start_handler));
 privateChat.command(["set_owner", "setowner"], wrapper(set_owner_handler));
-privateChat
-    .command(["help", "settings"])
-    .filter(owner_only, wrapper(help_handler));
+privateChat.command(["help", "settings"], wrapper(help_handler));
+
 privateChat.command("set").filter(owner_only, wrapper(set_chat_handler));
 privateChat.command("get").filter(owner_only, wrapper(get_chat_handler));
 privateChat.command("rem").filter(owner_only, wrapper(rem_chat_handler));
 
-privateChat
-    .on("msg:text")
-    .filter(
-        (ctx) => ctx.msg.forward_from?.username?.toLowerCase() === "botfather",
-        wrapper(bot_token_handler)
-    );
+privateChat.on("msg:text").filter(
+    // @ts-ignore
+    (ctx) => ctx.msg.forward_from?.username?.toLowerCase() === "botfather",
+    wrapper(bot_token_handler)
+);
 
 composer.on("msg", message_handler);
 

@@ -22,7 +22,7 @@ export default async function message_handler(ctx: BotContext) {
                 fromChatId,
                 message?.message_id as number,
                 {
-                    reply_markup: message?.reply_markup,
+                    reply_markup: message?.reply_markup
                 }
             );
         } catch (error: any) {

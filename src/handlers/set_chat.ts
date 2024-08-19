@@ -1,7 +1,6 @@
-import { getEntity, parseEntity } from "../modules/utils";
-
 import { BotContext } from "../bot";
 import db from "../database";
+import { getEntity } from "../modules/utils";
 
 export default async function set_chat_handler(ctx: BotContext) {
     const match = ctx.match as string;

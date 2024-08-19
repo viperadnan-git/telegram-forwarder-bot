@@ -28,18 +28,18 @@ export default async function bot_token_handler(ctx: BotContext) {
     const msgText = ctx.message?.text || "";
 
     const bot_token = extractBotToken(msgText, entities);
+
     if (bot_token !== undefined) {
         let bot = bots.get(bot_token);
+        const senderId = ctx.message?.from?.id as number;
+
         if (!bot) {
             bot = botCreator(bot_token);
             try {
                 await bot.api.setWebhook(WEBHOOK_HOST + "/bot" + bot_token, {
-                    drop_pending_updates: true,
+                    drop_pending_updates: true
                 });
-                await db.setOwner(
-                    parseInt(bot_token.split(":")[0]),
-                    ctx.message?.from?.id as number
-                );
+                await db.setOwner(parseInt(bot_token.split(":")[0]), senderId);
                 await ctx.reply(
                     "Bot cloned and you are the owner of the bot. Start using it!"
                 );
@@ -47,7 +47,8 @@ export default async function bot_token_handler(ctx: BotContext) {
                 logger.warn(`Error when setting webhook: ${error.message}`);
             }
         } else {
-            await ctx.reply("Bot is already cloned");
+            await db.setOwner(parseInt(bot_token.split(":")[0]), senderId);
+            await ctx.reply("Bot is already cloned and you are the owner.");
         }
     } else {
         await ctx.reply(

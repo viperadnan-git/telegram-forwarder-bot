@@ -1,5 +1,6 @@
 {
     "tabWidth": 4,
     "useTabs": false,
-    "endOfLine": "crlf"
+    "endOfLine": "crlf",
+    "trailingComma": "none"
 }

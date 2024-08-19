@@ -1,5 +1,5 @@
 import { BotContext } from "../bot";
-import { ChatFromGetChat } from "grammy/types";
+import { ChatFullInfo } from "grammy/types";
 
 export const formatObject = (obj: {
     [key: string]: number[] | undefined;
@@ -36,7 +36,7 @@ export const parseEntity = (text: string): string | number => {
 export const getEntity = async (
     ctx: BotContext,
     chatId: string
-): Promise<ChatFromGetChat | undefined> => {
+): Promise<ChatFullInfo | undefined> => {
     try {
         return await ctx.api.getChat(parseEntity(chatId));
     } catch (error: any) {

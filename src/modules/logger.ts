@@ -4,7 +4,7 @@ addColors({
     error: "red",
     warn: "yellow",
     info: "white",
-    debug: "gray",
+    debug: "gray"
 });
 
 const logger = createLogger({
@@ -14,7 +14,7 @@ const logger = createLogger({
             : "debug",
     format: format.combine(
         format.timestamp({
-            format: "DD-MM-YYYY HH:mm:ss",
+            format: "DD-MM-YYYY HH:mm:ss"
         }),
         format.printf(
             (info) =>
@@ -23,10 +23,10 @@ const logger = createLogger({
     ),
     transports: [
         new transports.Console({
-            format: format.combine(format.colorize({ all: true })),
+            format: format.combine(format.colorize({ all: true }))
         }),
-        new transports.File({ filename: "log.txt" }),
-    ],
+        new transports.File({ filename: "log.txt" })
+    ]
 });
 
 export default logger;

@@ -1,8 +1,6 @@
-import { getEntity, parseEntity } from "../modules/utils";
-
 import { BotContext } from "../bot";
-import { ChatFromGetChat } from "grammy/types";
 import db from "../database";
+import { getEntity } from "../modules/utils";
 
 export default async function set_owner_handler(ctx: BotContext) {
     const owner = await db.getOwner(ctx.me.id);

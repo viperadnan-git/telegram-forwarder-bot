@@ -9,27 +9,27 @@ export default async function start_handler(ctx: BotContext) {
                     [
                         {
                             text: "Create a bot",
-                            url: "https://t.me/BotFather",
+                            url: "https://t.me/BotFather"
                         },
                         {
                             text: "Feature Request",
-                            url: "https://github.com/viperadnan-git/telegram-forwarder-bot/issues",
-                        },
+                            url: "https://github.com/viperadnan-git/telegram-forwarder-bot/issues"
+                        }
                     ],
                     [
                         {
                             text: "Source Code",
-                            url: "https://github.com/viperadnan-git/telegram-forwarder-bot",
-                        },
+                            url: "https://github.com/viperadnan-git/telegram-forwarder-bot"
+                        }
                     ],
                     [
                         {
                             text: "Support Group",
-                            url: "https://t.me/vipercommunity",
-                        },
-                    ],
-                ],
-            },
+                            url: "https://t.me/vipercommunity"
+                        }
+                    ]
+                ]
+            }
         }
     );
 }
