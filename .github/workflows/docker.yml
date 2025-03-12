@@ -32,6 +32,7 @@ jobs:
               with:
                   images: ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}
                   tags: |
+                      type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
                       type=ref,event=branch
                       type=ref,event=pr
                       type=semver,pattern={{version}}
@@ -82,6 +83,7 @@ jobs:
               with:
                   images: ${{ env.REGISTRY }}/${{ github.actor }}/${{ env.IMAGE_NAME }}
                   tags: |
+                      type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
                       type=ref,event=branch
                       type=ref,event=pr
                       type=semver,pattern={{version}}
