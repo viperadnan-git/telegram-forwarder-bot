@@ -15,6 +15,7 @@ FROM oven/bun:latest as runner
 WORKDIR /app
 
 COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/package*.json ./
 
 EXPOSE 3000
 
