@@ -5,20 +5,60 @@ const REDIS_PREFIX = "fwdbot";
 
 class Database {
     private client: Redis;
+    private healthCheckInterval: NodeJS.Timeout | undefined;
 
     constructor(uri: string) {
         this.client = this.createClient(uri);
+        this.startHealthCheck();
     }
 
     private createClient(uri: string) {
-        const client = new Redis(uri);
+        const client = new Redis(uri, {
+            keepAlive: 30_000, // 30 seconds
+            reconnectOnError: (err) => {
+                const targetErrors = [
+                    "READONLY",
+                    "ECONNRESET",
+                    "ETIMEDOUT",
+                    "ENOTFOUND",
+                    "ECONNREFUSED"
+                ];
+                const shouldReconnect = targetErrors.some((targetError) =>
+                    err.message.toUpperCase().includes(targetError)
+                );
+                logger.warn(`Redis error: ${err.message}. Reconnecting...`);
+                return shouldReconnect;
+            }
+        });
+        client.on("connect", () => {
+            logger.debug("Redis connected");
+        });
+        client.on("ready", () => {
+            logger.info("Redis connection ready");
+        });
+        client.on("reconnecting", () => {
+            logger.debug("Redis reconnecting...");
+        });
         client.on("error", (err) => {
             logger.error(`Redis error: ${err}`);
         });
-        client.on("connect", () => {
-            logger.info("Connected to redis");
+        client.on("end", () => {
+            logger.warn("Redis connection ended");
+            if (this.healthCheckInterval) {
+                clearInterval(this.healthCheckInterval);
+            }
         });
         return client;
+    }
+
+    private startHealthCheck() {
+        this.healthCheckInterval = setInterval(() => {
+            this.client
+                .ping()
+                .catch((err) => {
+                    logger.error(`Redis health check failed: ${err}`);
+                }); 
+        }, 30_000);
     }
 
     public async getOwner(botId: number): Promise<number | undefined> {
