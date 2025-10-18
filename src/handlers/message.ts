@@ -24,7 +24,7 @@ export default async function message_handler(ctx: BotContext) {
                 message?.message_id as number,
                 {
                     reply_markup: message?.reply_markup,
-                    protect_content: me.first_name.startsWith("🛡️")
+                    protect_content: me.first_name.startsWith("~")
                 }
             );
         } catch (error: any) {
