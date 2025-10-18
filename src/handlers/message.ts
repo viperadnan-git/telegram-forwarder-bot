@@ -5,7 +5,8 @@ import logger from "../modules/logger";
 export default async function message_handler(ctx: BotContext) {
     const message = ctx.message ?? ctx.channelPost;
     const fromChatId = message?.chat.id as number;
-    const chatIds = await db.getChatMap(ctx.me.id, fromChatId);
+    const me = ctx.me;
+    const chatIds = await db.getChatMap(me.id, fromChatId);
 
     if (!chatIds?.length) return;
 
@@ -22,7 +23,8 @@ export default async function message_handler(ctx: BotContext) {
                 fromChatId,
                 message?.message_id as number,
                 {
-                    reply_markup: message?.reply_markup
+                    reply_markup: message?.reply_markup,
+                    protect_content: me.first_name.startsWith("🛡️")
                 }
             );
         } catch (error: any) {
