@@ -5,8 +5,9 @@ on:
     push:
         branches:
             - main
-    release:
-        types: [published]
+            - staging
+        tags:
+            - "v*"
 
 env:
     IMAGE_NAME: ${{ github.event.repository.name }}
