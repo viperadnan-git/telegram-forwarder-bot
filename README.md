@@ -12,6 +12,7 @@ This bot uses webhooks to receive updates from telegram servers. So, you need a 
 -   Configurations through commands
 -   Owner only commands, so no one can misuse the bot
 -   Easy to clone and create your own bot withing minutes
+-   Control forwarding behavior via bot name (protect content, remove captions)
 
 ## Commands
 
@@ -21,6 +22,15 @@ This bot uses webhooks to receive updates from telegram servers. So, you need a 
 -   `/rem` - Remove a channel from forwarding messages
 -   `/get` - List all the channels added
 -   `/set_owner` - Set the owner of the bot
+
+## Bot Name Modifiers
+
+You can control forwarding behavior by adding special characters to your bot's name (via [BotFather](https://t.me/BotFather)):
+
+-   `~` - Enable protected content (forwarded messages cannot be forwarded further or saved)
+-   `|` - Remove captions from forwarded messages
+
+For example, if your bot is named `MyForwarder~`, all forwarded messages will have content protection enabled. You can combine modifiers, e.g., `MyBot~|` for both protected content and no captions.
 
 ## Configurations
 
