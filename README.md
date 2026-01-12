@@ -50,11 +50,37 @@ Configurations are added in environment variables or [`.env.sample`](./.env.samp
 -   Set environment variables in the project settings
 -   (Optional) Set the `PORT` environment variable to the port number provided by the platform or set it to 3000
 
-### Deploy on VPS or any other server
+### Self-Hosting
 
 Not recommended for beginners.
 
-Note: You need a SSL certificates and a public IP address to run the bot on a VPS. As this bot work on webhooks, you need a domain name to set the webhook URL. You can use [Cloudflare Tunnel](https://try.cloudflare.com/) to get a free domain name and SSL certificates.
+Note: You need SSL certificates and a public IP address to run the bot. As this bot works on webhooks, you need a domain name to set the webhook URL. You can use [Cloudflare Tunnel](https://try.cloudflare.com/) to get a free temporary domain name and SSL certificates.
+
+#### Using Docker
+
+-   Clone this repository
+
+```sh
+git clone <repo-url> <project-name>
+cd <project-name>
+```
+
+-   Create a `.env` file with your environment variables (see [`.env.sample`](./.env.sample))
+
+-   Run with Docker Compose
+
+```sh
+docker-compose up -d
+```
+
+Or build and run manually:
+
+```sh
+docker build -t telegram-forwarder-bot .
+docker run -d --env-file .env -p 3000:3000 telegram-forwarder-bot
+```
+
+#### Manual Deployment
 
 -   Clone this repository
 
@@ -66,13 +92,13 @@ cd <project-name>
 -   Install dependencies
 
 ```sh
-npm install
+bun install
 ```
 
 -   Build the project
 
 ```sh
-npm run build
+bun run build
 ```
 
 -   Set environment variables
@@ -80,7 +106,7 @@ npm run build
 -   Start the bot
 
 ```sh
-npm start
+bun start
 ```
 
 ## Contributing
