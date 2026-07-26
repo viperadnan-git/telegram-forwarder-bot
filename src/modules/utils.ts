@@ -38,11 +38,15 @@ export async function resolveUser(
     input: string
 ): Promise<ResolveResult> {
     const id = Number(input.trim());
-    if (!Number.isSafeInteger(id) || id <= 0) {
+    if (!Number.isSafeInteger(id)) {
         return {
             ok: false,
             error: "Telegram only finds people by numeric id, not by @username"
         };
+    }
+    // Only chats have negative ids, so this never reaches getChat.
+    if (id <= 0) {
+        return { ok: false, error: "That id is a chat, not a person" };
     }
 
     try {

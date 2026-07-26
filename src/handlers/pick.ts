@@ -122,7 +122,16 @@ export function cancelPicker(botId: number, userId: number): boolean {
     return pending.delete(key(botId, userId));
 }
 
+/** Nothing else sweeps the map, and an abandoned /set never comes back. */
+function dropExpired() {
+    const cutoff = Date.now() - PENDING_TTL_MS;
+    for (const [k, entry] of pending) {
+        if (entry.at < cutoff) pending.delete(k);
+    }
+}
+
 export async function startPicker(ctx: BotContext) {
+    dropExpired();
     pending.set(key(ctx.me.id, ctx.from?.id ?? 0), {
         chatId: null,
         name: "",

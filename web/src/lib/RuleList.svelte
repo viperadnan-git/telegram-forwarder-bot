@@ -1,21 +1,48 @@
 <script lang="ts">
-import Check from "./Check.svelte";
+import { ruleIssue } from "$schema";
+import Icon from "./Icon.svelte";
+import Switch from "./Switch.svelte";
 import { type MatchTarget, MEDIA_KINDS, type Rule } from "./types";
 
-let {
-    rules = $bindable([]),
-    title,
-    note
-}: { rules: Rule[]; title: string; note: string } = $props();
+let { rules = $bindable([]) }: { rules: Rule[] } = $props();
 
-const TYPES: Rule["type"][] = ["keyword", "regex", "media", "sender"];
+// Named and described: "regex" or "sender" alone does not tell you which one
+// you want.
+const TYPES: {
+    type: Rule["type"];
+    label: string;
+    what: string;
+    icon: string;
+}[] = [
+    {
+        type: "keyword",
+        label: "Keyword",
+        what: "A word or phrase in the message",
+        icon: "keyword"
+    },
+    {
+        type: "regex",
+        label: "Pattern",
+        what: "A regular expression, for what a keyword cannot express",
+        icon: "replace"
+    },
+    {
+        type: "media",
+        label: "Media type",
+        what: "Photos, videos, documents and the rest",
+        icon: "media"
+    },
+    {
+        type: "sender",
+        label: "Sender",
+        what: "Who posted it, or who it came from",
+        icon: "owner"
+    }
+];
 
-const LABELS: Record<Rule["type"], string> = {
-    keyword: "Keyword",
-    regex: "Regex",
-    media: "Media type",
-    sender: "Sender"
-};
+const LABELS = Object.fromEntries(
+    TYPES.map((t) => [t.type, t.label])
+) as Record<Rule["type"], string>;
 
 function add(type: Rule["type"]) {
     const blank: Record<Rule["type"], Rule> = {
@@ -54,8 +81,8 @@ function toggleKind(rule: Extract<Rule, { type: "media" }>, kind: string) {
 </script>
 
 {#snippet targetPicker(rule: Extract<Rule, { target: MatchTarget }>)}
-    <div style="display:flex; align-items:center; gap:10px; margin-top:10px">
-        <span class="field-label" style="margin:0">Match against</span>
+    <div class="row">
+        <span class="grow"><span class="row-label">Match against</span></span>
         <div class="segmented">
             <button
                 type="button"
@@ -71,23 +98,19 @@ function toggleKind(rule: Extract<Rule, { type: "media" }>, kind: string) {
     </div>
 {/snippet}
 
-<h2 class="section-title">{title}</h2>
-<div class="card">
-    {#each rules as rule, i (i)}
-        <div class="field">
-            <div style="display:flex; align-items:center; gap:8px; margin-bottom:7px">
-                <span class="field-label" style="margin:0; flex:1">
-                    {LABELS[rule.type]}
-                </span>
-                <button
-                    type="button"
-                    class="link destructive"
-                    style="font-size:14px"
-                    onclick={() => remove(i)}>Remove</button
-                >
-            </div>
+<!-- One card per rule, each with its own note, as BotFather does per setting. -->
+{#each rules as rule, i (i)}
+    {@const issue = ruleIssue(rule)}
+    <div class="section-head">
+        <h2 class="section-title">Rule {i + 1} · {LABELS[rule.type]}</h2>
+        <button type="button" class="link destructive" onclick={() => remove(i)}>
+            Remove
+        </button>
+    </div>
 
-            {#if rule.type === "keyword"}
+    <div class="card">
+        {#if rule.type === "keyword"}
+            <div class="field">
                 <input
                     class="input"
                     type="text"
@@ -96,11 +119,11 @@ function toggleKind(rule: Extract<Rule, { type: "media" }>, kind: string) {
                         ? "Part of a file name"
                         : "Word or phrase"}
                 />
-                {@render targetPicker(rule)}
-                <div style="margin-top:10px">
-                    <Check bind:checked={rule.caseSensitive} label="Match case" />
-                </div>
-            {:else if rule.type === "regex"}
+            </div>
+            {@render targetPicker(rule)}
+            <Switch bind:checked={rule.caseSensitive} label="Match case" />
+        {:else if rule.type === "regex"}
+            <div class="field">
                 <input
                     class="input mono"
                     type="text"
@@ -112,11 +135,11 @@ function toggleKind(rule: Extract<Rule, { type: "media" }>, kind: string) {
                     autocorrect="off"
                     spellcheck="false"
                 />
-                {@render targetPicker(rule)}
-                <p class="note" style="margin-left:0">
-                    Lookbehind and backreferences are not supported.
-                </p>
-            {:else if rule.type === "media"}
+            </div>
+            {@render targetPicker(rule)}
+        {:else if rule.type === "media"}
+            <div class="field">
+                <span class="field-label">Matches these</span>
                 <div class="chips">
                     {#each MEDIA_KINDS as kind}
                         <button
@@ -128,7 +151,9 @@ function toggleKind(rule: Extract<Rule, { type: "media" }>, kind: string) {
                         >
                     {/each}
                 </div>
-            {:else}
+            </div>
+        {:else}
+            <div class="field">
                 <input
                     class="input"
                     type="text"
@@ -138,26 +163,39 @@ function toggleKind(rule: Extract<Rule, { type: "media" }>, kind: string) {
                     autocapitalize="off"
                     spellcheck="false"
                 />
-            {/if}
-
-            {#if rule.type === "sender"}
-                <p class="note" style="margin-left:0">
-                    Matches the author, the channel a post was sent as, and — for a
-                    forwarded message — who it originally came from.
-                </p>
-            {/if}
-        </div>
-    {/each}
-
-    <div class="field">
-        <span class="field-label">Add a rule</span>
-        <div class="chips">
-            {#each TYPES as type}
-                <button type="button" class="chip" onclick={() => add(type)}>
-                    {LABELS[type]}
-                </button>
-            {/each}
-        </div>
+            </div>
+        {/if}
     </div>
+
+    {#if issue}
+        <p class="note invalid-note">{issue}</p>
+    {:else if rule.type === "regex"}
+        <p class="note">
+            Runs on RE2, which cannot backtrack. Lookbehind and backreferences
+            are not supported; for a named group use (?P&lt;name&gt;…).
+        </p>
+    {:else if rule.type === "media"}
+        <p class="note">Tap a kind to include or exclude it.</p>
+    {:else if rule.type === "sender"}
+        <p class="note">
+            Matches the author, the channel a post was sent as, and — for a
+            forwarded message — who it originally came from.
+        </p>
+    {/if}
+{/each}
+
+<h2 class="section-title">
+    {rules.length ? "Add another rule" : "Add a rule"}
+</h2>
+<div class="card inset-rules">
+    {#each TYPES as t}
+        <button type="button" class="row accent" onclick={() => add(t.type)}>
+            <span class="icon"><Icon name={t.icon} /></span>
+            <span class="grow">
+                <span class="row-label">{t.label}</span>
+                <span class="sub">{t.what}</span>
+            </span>
+            <span class="chevron" aria-hidden="true">›</span>
+        </button>
+    {/each}
 </div>
-<p class="note">{note}</p>

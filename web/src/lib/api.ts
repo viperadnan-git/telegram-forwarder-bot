@@ -85,5 +85,26 @@ export const handOver = (input: string) =>
         body: JSON.stringify({ input })
     }).then((r) => r.ownerId);
 
+export type BotInfo = {
+    id: number;
+    username: string;
+    firstName: string;
+    /** Inlined by the server: the Telegram file URL carries the token. */
+    photo?: string;
+};
+
+/** Asks Telegram who the token belongs to, without claiming anything yet. */
+export const checkClone = (token: string) =>
+    request<{ bot: BotInfo }>("/clone/check", {
+        method: "POST",
+        body: JSON.stringify({ token })
+    }).then((r) => r.bot);
+
+export const clone = (token: string) =>
+    request<{ bot: BotInfo; alreadyRunning: boolean }>("/clone", {
+        method: "POST",
+        body: JSON.stringify({ token })
+    });
+
 export const deleteRoute = (id: string) =>
     request<void>(`/routes/${id}`, { method: "DELETE" });

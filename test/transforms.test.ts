@@ -182,3 +182,107 @@ describe("clamp", () => {
         expect(out.entities).toEqual([]);
     });
 });
+
+describe("case-insensitive replacement", () => {
+    const run = (text: string, rule: Record<string, unknown>) =>
+        applyCaption(cap({ replace: [rule] }), { text, entities: [] });
+
+    // Stored configs predate the option, so the default must not change them.
+    test("defaults to matching case, as it always has", () => {
+        expect(
+            run("Buy NOW and buy later", {
+                pattern: "buy",
+                replacement: "get"
+            }).text
+        ).toBe("Buy NOW and get later");
+    });
+
+    test("literal matching ignores case when asked", () => {
+        expect(
+            run("Buy NOW and buy later", {
+                pattern: "buy",
+                replacement: "get",
+                caseSensitive: false
+            }).text
+        ).toBe("get NOW and get later");
+    });
+
+    test("a regex ignores case when asked", () => {
+        expect(
+            run("Visit T.ME/x and t.me/y", {
+                pattern: "t\\.me/\\w+",
+                replacement: "[link]",
+                isRegex: true,
+                caseSensitive: false
+            }).text
+        ).toBe("Visit [link] and [link]");
+    });
+
+    test("an explicit inline flag still works", () => {
+        expect(
+            run("ABC abc", {
+                pattern: "(?i)abc",
+                replacement: "x",
+                isRegex: true
+            }).text
+        ).toBe("x x");
+    });
+
+    // Offsets come from the original text, not the lower-cased copy.
+    test("entities survive a case-insensitive replacement", () => {
+        const result = applyCaption(
+            cap({
+                replace: [
+                    { pattern: "buy", replacement: "get", caseSensitive: false }
+                ]
+            }),
+            { text: "Hello BUY world", entities: [bold(0, 5)] }
+        );
+        expect(result.text).toBe("Hello get world");
+        expect(result.entities).toEqual([bold(0, 5)]);
+    });
+});
+
+describe("case folding that changes string length", () => {
+    // "İ" (U+0130) lower-cases to two code units. Searching a lower-cased copy
+    // and slicing the original shifted every later index.
+    const cfg = (over: Record<string, unknown>) =>
+        cap({
+            replace: [{ replacement: "OFFER", caseSensitive: false, ...over }]
+        });
+
+    test("a literal match after a dotted capital I lands correctly", () => {
+        expect(
+            applyCaption(cfg({ pattern: "deal" }), {
+                text: "İstanbul deal today",
+                entities: []
+            }).text
+        ).toBe("İstanbul OFFER today");
+    });
+
+    test("entities before the match are untouched", () => {
+        const out = applyCaption(cfg({ pattern: "deal" }), {
+            text: "İstanbul deal today",
+            entities: [bold(0, 8)]
+        });
+        expect(out.entities).toEqual([bold(0, 8)]);
+    });
+
+    test("punctuation in a literal is not treated as a pattern", () => {
+        expect(
+            applyCaption(cfg({ pattern: "a.b" }), {
+                text: "a.b and axb",
+                entities: []
+            }).text
+        ).toBe("OFFER and axb");
+    });
+
+    test("a literal with regex metacharacters still matches case-insensitively", () => {
+        expect(
+            applyCaption(cfg({ pattern: "(SALE)" }), {
+                text: "big (sale) here",
+                entities: []
+            }).text
+        ).toBe("big OFFER here");
+    });
+});

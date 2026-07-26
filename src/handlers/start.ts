@@ -11,6 +11,8 @@ export default async function start_handler(ctx: BotContext) {
 
     const settings = miniAppUrl(ctx.me.id);
     const help = miniAppUrl(ctx.me.id, "help");
+    // The not-owner screen is where a stranger sets up their own bot.
+    const clone = !isOwner ? miniAppUrl(ctx.me.id, "not-owner") : undefined;
 
     // Everything that sets up forwarding is owner-only, so pointing a stranger
     // at /set only earns them a refusal.
@@ -21,13 +23,16 @@ export default async function start_handler(ctx: BotContext) {
         body += "Nobody owns me yet. Send /set_owner to claim me.";
     } else {
         body +=
-            "This one belongs to someone else. To run your own copy, create a " +
-            "bot with @BotFather and forward me the message with its token.";
+            "This one belongs to someone else. Set up your own with the button " +
+            "below — you will need a token from @BotFather.";
     }
 
     const buttons = [
         ...(settings && isOwner
             ? [[{ text: "Settings", web_app: { url: settings } }]]
+            : []),
+        ...(clone
+            ? [[{ text: "Use your own bot", web_app: { url: clone } }]]
             : []),
         ...(help ? [[{ text: "How it works", web_app: { url: help } }]] : [])
     ];

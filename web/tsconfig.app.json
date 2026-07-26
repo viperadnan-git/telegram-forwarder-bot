@@ -15,7 +15,13 @@
          */
         "allowJs": true,
         "checkJs": true,
-        "moduleDetection": "force"
+        "moduleDetection": "force",
+        "paths": { "$schema": ["../src/schema.ts"] }
     },
-    "include": ["src/**/*.ts", "src/**/*.js", "src/**/*.svelte"]
+    "include": [
+        "src/**/*.ts",
+        "src/**/*.js",
+        "src/**/*.svelte",
+        "../src/schema.ts"
+    ]
 }

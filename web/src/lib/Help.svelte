@@ -1,7 +1,10 @@
 <script lang="ts">
+import BackBar from "./BackBar.svelte";
+import Hero from "./Hero.svelte";
 import { botId, copyText, haptic } from "./telegram";
 
-let { onback }: { onback: () => void } = $props();
+let { onback, backLabel = "Back" }: { onback: () => void; backLabel?: string } =
+    $props();
 
 let copied = $state(false);
 
@@ -107,19 +110,12 @@ const faq = [
 </script>
 
 <div class="page">
-    <header class="masthead">
-        <button type="button" class="icon-btn" aria-label="Back" onclick={onback}>
-            <svg width="19" height="19" viewBox="0 0 24 24" fill="none"
-                stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
-                stroke-linejoin="round" aria-hidden="true">
-                <path d="M15 18l-6-6 6-6" />
-            </svg>
-        </button>
-        <div class="grow">
-            <h1>Help</h1>
-            <p>Forwarding messages between your chats</p>
-        </div>
-    </header>
+    <BackBar {onback} label={backLabel} />
+
+    <Hero icon="help" title="Help">
+        Forwarding messages between your chats, one source to many
+        destinations.
+    </Hero>
 
     <!-- Same rail as the routes list. -->
     <div class="bay">

@@ -17,5 +17,8 @@
         "svelte-check": "^4.7.3",
         "typescript": "^6",
         "vite": "^8.1.5"
+    },
+    "dependencies": {
+        "zod": "^4.4.3"
     }
 }

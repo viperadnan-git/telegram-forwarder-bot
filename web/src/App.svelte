@@ -1,23 +1,61 @@
 <script lang="ts">
+import { tick } from "svelte";
 import * as api from "./lib/api";
 import { ApiError } from "./lib/api";
 import ChatInput from "./lib/ChatInput.svelte";
-import ChatLabel from "./lib/ChatLabel.svelte";
 import Help from "./lib/Help.svelte";
+import Hero from "./lib/Hero.svelte";
+import Icon from "./lib/Icon.svelte";
 import NoAccess from "./lib/NoAccess.svelte";
 import Owner from "./lib/Owner.svelte";
 import RouteEditor from "./lib/RouteEditor.svelte";
-import { currentView, navigate, type View } from "./lib/router";
+import RouteLink from "./lib/RouteLink.svelte";
+import {
+    back,
+    currentDepth,
+    isOverlay,
+    type Loc,
+    needsRoutes,
+    onLocation,
+    parse,
+    push,
+    replace
+} from "./lib/router";
 import Skeleton from "./lib/Skeleton.svelte";
-import { botId, close, confirm, init } from "./lib/telegram";
+import {
+    backButton,
+    botId,
+    close,
+    confirm,
+    init,
+    onBackButton
+} from "./lib/telegram";
 import { type Route, type RouteConfig, withDefaults } from "./lib/types";
 
 let routes = $state<Route[]>([]);
 let loading = $state(true);
 let error = $state("");
-const initialView = currentView();
-let view = $state<View>(initialView);
-let editing = $state<Route | null>(null);
+
+// The URL is the state: every screen is a history entry, so the system back
+// gesture pops one screen instead of closing the whole app.
+const initialLoc = parse();
+let loc = $state<Loc>(initialLoc);
+let depth = $state(0);
+let editorDirty = $state(false);
+
+// TS cannot narrow `loc` inside the closure, so pull the id out first.
+const editing = $derived.by(() => {
+    if (loc.name !== "route") return null;
+    const id = loc.id;
+    return routes.find((r) => r.id === id) ?? null;
+});
+const pane = $derived(loc.name === "route" ? loc.pane : null);
+const manual = $derived(loc.name === "add");
+
+/** Sheets sit over the settings screen, so it stays the page behind them. */
+const view = $derived(
+    loc.name === "route" || loc.name === "add" ? "settings" : loc.name
+);
 let refreshing = $state(false);
 let refreshNote = $state("");
 let confirmingRefresh = $state(false);
@@ -27,33 +65,37 @@ const chatCount = $derived(
     new Set(routes.flatMap((r) => [r.sourceChatId, r.destChatId])).size
 );
 let starting = $state(false);
-let manual = $state(false);
 let adding = $state(false);
-let newSource = $state<number | null>(null);
-let newDest = $state<number | null>(null);
+let newSource = $state("");
+let newDest = $state("");
 let sourceInput = $state<ChatInput>();
 let destInput = $state<ChatInput>();
 
 const canAdd = $derived(
-    newSource !== null && newDest !== null && newSource !== newDest
+    newSource.trim() !== "" &&
+        newDest.trim() !== "" &&
+        newSource.trim() !== newDest.trim()
 );
 
-function cancelManual() {
+function resetManual() {
     sourceInput?.reset();
     destInput?.reset();
-    manual = false;
     error = "";
 }
 
+/** Both chats are looked up here, once, rather than on every keystroke. */
 async function addManually() {
     if (!canAdd) return;
     adding = true;
     error = "";
     try {
-        routes = [...routes, await api.createRoute(newSource!, newDest!)];
-        sourceInput?.reset();
-        destInput?.reset();
-        manual = false;
+        const [source, dest] = await Promise.all([
+            api.resolveChat(newSource.trim()),
+            api.resolveChat(newDest.trim())
+        ]);
+        routes = [...routes, await api.createRoute(source.chatId, dest.chatId)];
+        resetManual();
+        back();
     } catch (e: any) {
         error = e.message;
     } finally {
@@ -135,14 +177,65 @@ const NO_BOT =
 let loaded = false;
 
 /** Routes are fetched once, whichever screen the app happened to open on. */
-function goto(next: View) {
-    view = next;
-    error = "";
-    navigate(next);
-    if (next !== "settings" || loaded) return;
+function ensureRoutes(next: Loc) {
+    if (!needsRoutes(next) || loaded) return;
     if (botId()) load();
-    else error = NO_BOT;
+    else {
+        loading = false;
+        error = NO_BOT;
+    }
 }
+
+/** Scrolling must wait for the new screen to render, or there is nothing to scroll. */
+async function show(next: Loc, scrollY: number) {
+    loc = next;
+    depth = currentDepth();
+    ensureRoutes(next);
+    if (isOverlay(next)) return;
+    await tick();
+    window.scrollTo(0, scrollY);
+}
+
+function go(next: Loc) {
+    error = "";
+    push(next);
+    show(next, 0);
+}
+
+/** Replaces rather than pushes: an access refusal is not a screen to go back to. */
+function land(next: Loc) {
+    error = "";
+    replace(next);
+    show(next, 0);
+}
+
+onLocation(async (next, scrollY) => {
+    // Leaving the editor with pending edits is easy to do by accident once the
+    // system gesture is wired up.
+    if (
+        loc.name === "route" &&
+        next.name !== "route" &&
+        editorDirty &&
+        !(await confirm("Discard unsaved changes?"))
+    ) {
+        push(loc);
+        depth = currentDepth();
+        return;
+    }
+    error = "";
+    show(next, scrollY);
+});
+
+onBackButton(back);
+
+$effect(() => {
+    backButton(depth > 0);
+});
+
+// A fixed sheet does not stop the document behind it scrolling.
+$effect(() => {
+    document.body.classList.toggle("sheet-open", isOverlay(loc));
+});
 
 async function load() {
     loading = true;
@@ -150,11 +243,17 @@ async function load() {
     try {
         routes = await api.listRoutes();
         loaded = true;
+        // Deep link to a route that has since been deleted.
+        if (loc.name === "route") {
+            const id = loc.id;
+            if (!routes.some((r) => r.id === id)) land({ name: "settings" });
+        }
     } catch (e: any) {
         if (e instanceof ApiError && e.status === 403) {
             // The URL should say which screen you are on.
-            view = e.reason === "unclaimed" ? "unclaimed" : "not-owner";
-            navigate(view);
+            land({
+                name: e.reason === "unclaimed" ? "unclaimed" : "not-owner"
+            });
         } else {
             error = e.message;
         }
@@ -168,119 +267,88 @@ async function save(patch: { config: RouteConfig; enabled: boolean }) {
     routes = routes.map((r) =>
         r.id === updated.id ? { ...r, ...updated } : r
     );
+    editorDirty = false;
 }
 
 async function remove() {
     if (!(await confirm("Delete this destination?"))) return;
     await api.deleteRoute(editing!.id);
     routes = routes.filter((r) => r.id !== editing!.id);
-    editing = null;
+    editorDirty = false;
+    back();
 }
 
-if (initialView !== "settings") {
-    loading = false;
-} else if (botId()) {
-    load();
-} else {
-    loading = false;
-    error = NO_BOT;
-}
+// Seeds history state so the first popstate knows it is back at the root.
+replace(initialLoc);
+if (needsRoutes(initialLoc)) ensureRoutes(initialLoc);
+else loading = false;
 </script>
 
-{#snippet actionRow(label: string, sub: string, action: () => void)}
-    <button type="button" class="row" onclick={action}>
-        <span class="grow">
-            <span class="row-label">{label}</span>
-            <span class="sub">{sub}</span>
-        </span>
+{#snippet actionRow(
+    icon: string,
+    label: string,
+    action: () => void,
+    tone = ""
+)}
+    <button type="button" class="row {tone}" onclick={action}>
+        <span class="icon"><Icon name={icon} /></span>
+        <span class="grow"><span class="row-label">{label}</span></span>
         <span class="chevron" aria-hidden="true">›</span>
     </button>
 {/snippet}
 
 {#snippet addSection()}
     <h2 class="section-title">Add forwarding</h2>
-
-    {#if manual}
-        <div class="card">
-            <ChatInput bind:this={sourceInput} bind:chatId={newSource} label="Source" />
-            <ChatInput bind:this={destInput} bind:chatId={newDest} label="Destination" />
-        </div>
-        <div class="actions-stack">
-            <button
-                type="button"
-                class="btn"
-                disabled={!canAdd || adding}
-                onclick={addManually}
-            >
-                {adding ? "Adding…" : "Add forwarding"}
-            </button>
-            <button type="button" class="btn secondary" onclick={cancelManual}>
-                Cancel
-            </button>
-        </div>
-    {:else}
-        <div class="card">
-            {@render actionRow(
-                starting ? "Opening picker…" : "Pick from a list",
-                "Opens in your chat with the bot, so this window closes",
-                startSetFlow
-            )}
-            {@render actionRow(
-                "Enter chats yourself",
-                "Chat id, @username or t.me link",
-                () => (manual = true)
-            )}
-        </div>
-    {/if}
-
+    <div class="card inset-rules">
+        {@render actionRow(
+            "plus",
+            starting ? "Opening picker…" : "Pick from a list",
+            startSetFlow,
+            "accent"
+        )}
+        {@render actionRow(
+            "plus",
+            "Enter chats yourself",
+            () => go({ name: "add" }),
+            "accent"
+        )}
+    </div>
     <p class="note">
-        I must already be in both chats — an administrator, if it is a channel.
+        The picker lists channels where we are both administrators, and groups I
+        am in. Enter a chat yourself when it is not listed.
     </p>
 {/snippet}
 
 {#if view === "help"}
-    <Help onback={() => goto("settings")} />
+    <Help
+        onback={() => (depth > 0 ? back() : close())}
+        backLabel={depth > 0 ? "Back" : "Close"}
+    />
 {:else if view === "owner"}
-    <Owner onback={() => goto("settings")} />
+    <Owner
+        onback={() => (depth > 0 ? back() : close())}
+        backLabel={depth > 0 ? "Back" : "Close"}
+    />
 {:else if view === "not-owner" || view === "unclaimed"}
-    <NoAccess reason={view} onhelp={() => goto("help")} />
+    <NoAccess
+        reason={view}
+        onhelp={() => go({ name: "help" })}
+        onclaimed={() => go({ name: "settings" })}
+    />
 {:else}
 <div class="page">
-    <header class="masthead">
-        <div class="grow">
-            <h1>Forwarding</h1>
-            <p>
-            {#if loading}
-                &nbsp;
-            {:else if routes.length}
-                {plural(grouped.length, "source")} · {plural(
-                    routes.length,
-                    "destination"
-                )}
-            {:else}
-                Nothing forwarding yet
-            {/if}
-            </p>
-        </div>
-
-        {#if routes.length}
-            <button
-                type="button"
-                class="icon-btn"
-                class:busy={refreshing}
-                disabled={refreshing}
-                aria-label="Refresh chat names"
-                onclick={() => (confirmingRefresh = true)}
-            >
-                <svg width="19" height="19" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" stroke-width="2.1" stroke-linecap="round"
-                    stroke-linejoin="round" aria-hidden="true">
-                    <path d="M21 12a9 9 0 1 1-2.64-6.36" />
-                    <path d="M21 3v6h-6" />
-                </svg>
-            </button>
+    <Hero icon="forward" title="Forwarding">
+        {#if loading}
+            &nbsp;
+        {:else if routes.length}
+            {plural(grouped.length, "source")} · {plural(
+                routes.length,
+                "destination"
+            )}
+        {:else}
+            Copy new messages from one chat into another
         {/if}
-    </header>
+    </Hero>
 
     {#if error}<p class="banner">{error}</p>{/if}
     {#if refreshNote}<p class="note refresh-note">{refreshNote}</p>{/if}
@@ -292,52 +360,17 @@ if (initialView !== "settings") {
             <strong>Nothing forwarding yet</strong>
             <p>Pick a chat to forward from, and one to forward to.</p>
         </div>
-
     {:else}
         <div class="stagger">
             {#each grouped as [source, dests], gi (source)}
-                <div class="bay" style="animation-delay:{gi * 45}ms">
-                    <div class="node">
-                        <span class="dot"></span>
-                        <div class="grow">
-                            <ChatLabel id={source} name={dests[0].sourceName} />
-                            <div class="sub">
-                                {plural(dests.length, "destination")}
-                            </div>
-                        </div>
-                    </div>
-
-                    {#each dests as route (route.id)}
-                        {@const tags = chips(route)}
-                        <button
-                            type="button"
-                            class="drop"
-                            class:paused={!route.enabled}
-                            onclick={() => (editing = route)}
-                        >
-                            <span
-                                class="dot"
-                                class:hollow={tags.length === 0 || !route.enabled}
-                            ></span>
-                            <div class="grow">
-                                <ChatLabel
-                                    id={route.destChatId}
-                                    name={route.destName}
-                                />
-                                {#if !route.enabled || tags.length}
-                                    <div class="chips">
-                                        {#if !route.enabled}
-                                            <span class="chip off">paused</span>
-                                        {/if}
-                                        {#each tags as tag}
-                                            <span class="chip">{tag}</span>
-                                        {/each}
-                                    </div>
-                                {/if}
-                            </div>
-                            <span class="chevron" aria-hidden="true">›</span>
-                        </button>
-                    {/each}
+                <div style="animation-delay:{gi * 45}ms">
+                    <RouteLink
+                        sourceChatId={source}
+                        sourceName={dests[0].sourceName}
+                        routes={dests}
+                        {chips}
+                        onopen={(route) => go({ name: "route", id: route.id, pane: null })}
+                    />
                 </div>
             {/each}
         </div>
@@ -346,14 +379,17 @@ if (initialView !== "settings") {
     {@render addSection()}
 
     <h2 class="section-title">This bot</h2>
-    <div class="card">
-        {@render actionRow("How it works", "Setup, commands and questions", () =>
-            goto("help")
-        )}
-        {@render actionRow("Owner", "Hand the bot to someone else", () =>
-            goto("owner")
-        )}
+    <div class="card inset-rules">
+        {@render actionRow("help", "How it works", () => go({ name: "help" }))}
+        {@render actionRow("owner", "Owner", () => go({ name: "owner" }))}
+        {#if routes.length}
+            {@render actionRow("refresh", refreshing ? "Refreshing…" : "Refresh chat names", () => (confirmingRefresh = true))}
+        {/if}
     </div>
+    <p class="note">
+        Refreshing asks Telegram for the current name of every chat, one request
+        each.
+    </p>
 </div>
 {/if}
 
@@ -404,9 +440,65 @@ if (initialView !== "settings") {
     {#key editing.id}
         <RouteEditor
             route={editing}
+            {pane}
+            onpane={(next) =>
+                next
+                    ? go({ name: "route", id: editing.id, pane: next })
+                    : back()}
             onsave={save}
-            onclose={() => (editing = null)}
+            onclose={back}
             ondelete={remove}
+            ondirty={(d) => (editorDirty = d)}
         />
     {/key}
+{/if}
+
+{#if manual}
+    <div class="sheet">
+        <div class="sheet-bar">
+            <button type="button" class="pill" onclick={back}>
+                <Icon name="back" size={16} /> Back
+            </button>
+            <span class="sheet-title">Add forwarding</span>
+            <span></span>
+        </div>
+
+        <div class="page">
+            <Hero icon="plus" title="Enter chats yourself">
+                For chats the picker will not list. I must already be in both of
+                them.
+            </Hero>
+
+            {#if error}<p class="banner">{error}</p>{/if}
+
+            <div class="card">
+                <ChatInput
+                    bind:this={sourceInput}
+                    bind:value={newSource}
+                    label="Source"
+                />
+                <ChatInput
+                    bind:this={destInput}
+                    bind:value={newDest}
+                    label="Destination"
+                />
+            </div>
+            <p class="note">
+                A chat id, an @username or a t.me link. Both are looked up when
+                you tap Add, so nothing is checked while you type. In a channel I
+                have to be an administrator.
+            </p>
+
+            <div class="actions-stack">
+                <button
+                    type="button"
+                    class="btn"
+                    disabled={!canAdd || adding}
+                    onclick={addManually}
+                >
+                    {adding ? "Adding…" : "Add forwarding"}
+                </button>
+            </div>
+        </div>
+    </div>
 {/if}

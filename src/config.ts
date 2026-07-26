@@ -1,109 +1,7 @@
-import { z } from "zod";
 import { compile, isSupportedPattern } from "./regex";
+import { type RouteConfig, routeConfigSchema } from "./schema";
 
-export const MEDIA_KINDS = [
-    "text",
-    "photo",
-    "video",
-    "animation",
-    "audio",
-    "document",
-    "sticker",
-    "voice",
-    "video_note",
-    "poll",
-    "contact",
-    "location",
-    "dice",
-    "paid_media"
-] as const;
-
-export type MediaKind = (typeof MEDIA_KINDS)[number];
-
-/** What a keyword or regex rule is tested against. */
-export const MATCH_TARGETS = ["text", "filename"] as const;
-export type MatchTarget = (typeof MATCH_TARGETS)[number];
-
-const targetField = z.enum(MATCH_TARGETS).default("text");
-
-const keywordRule = z.object({
-    type: z.literal("keyword"),
-    value: z.string().min(1).max(256),
-    caseSensitive: z.boolean().default(false),
-    target: targetField
-});
-
-const regexRule = z.object({
-    type: z.literal("regex"),
-    pattern: z.string().min(1).max(512),
-    target: targetField
-});
-
-const mediaRule = z.object({
-    type: z.literal("media"),
-    kinds: z.array(z.enum(MEDIA_KINDS)).min(1)
-});
-
-const senderRule = z.object({
-    type: z.literal("sender"),
-    ids: z.array(z.number().int()).default([]),
-    usernames: z.array(z.string().min(1)).default([])
-});
-
-export const ruleSchema = z.discriminatedUnion("type", [
-    keywordRule,
-    regexRule,
-    mediaRule,
-    senderRule
-]);
-
-const emptyToUndefined = z
-    .string()
-    .max(1024)
-    .optional()
-    .transform((v) => (v === "" ? undefined : v));
-
-const replaceSchema = z.object({
-    pattern: z.string().min(1).max(512),
-    replacement: z.string().max(1024).default(""),
-    isRegex: z.boolean().default(false)
-});
-
-export const routeConfigSchema = z.object({
-    mode: z.enum(["copy", "forward"]).default("copy"),
-    protectContent: z.boolean().default(false),
-    silent: z.boolean().default(false),
-    // copyMessage carries the original's buttons over unless dropped.
-    removeButtons: z.boolean().default(false),
-    filters: z
-        .object({
-            whitelist: z.array(ruleSchema).default([]),
-            blacklist: z.array(ruleSchema).default([])
-        })
-        .default({ whitelist: [], blacklist: [] }),
-    caption: z
-        .object({
-            strip: z.boolean().default(false),
-            // "" is what an emptied input sends; treat it as absent so the
-            // client's truthiness check and hasCaptionTransform agree.
-            prepend: emptyToUndefined,
-            append: emptyToUndefined,
-            replace: z.array(replaceSchema).default([]),
-            removeLinks: z.boolean().default(false),
-            removeMentions: z.boolean().default(false)
-        })
-        .default({
-            strip: false,
-            prepend: undefined,
-            append: undefined,
-            replace: [],
-            removeLinks: false,
-            removeMentions: false
-        })
-});
-
-export type RouteConfig = z.infer<typeof routeConfigSchema>;
-export type Rule = z.infer<typeof ruleSchema>;
+export * from "./schema";
 
 /** Caption is rewritten. Drives method selection in forward.ts. */
 export const hasCaptionTransform = (c: RouteConfig) =>
@@ -118,10 +16,24 @@ export const hasCaptionTransform = (c: RouteConfig) =>
 export const modifiesContent = (c: RouteConfig) =>
     hasCaptionTransform(c) || c.removeButtons;
 
-/** Never throws: a corrupt config falls back to defaults rather than going dark. */
-export function parseConfig(raw: unknown): RouteConfig {
-    const parsed = routeConfigSchema.safeParse(raw ?? {});
-    return parsed.success ? parsed.data : routeConfigSchema.parse({});
+/**
+ * Names the offending field the way the app labels it, so a rejection reads as
+ * an instruction rather than a schema path.
+ */
+function describe(path: readonly PropertyKey[]): string {
+    const [a, b, i] = path;
+    const nth = typeof i === "number" ? i + 1 : 0;
+
+    if (a === "filters" && nth) {
+        const list = b === "whitelist" ? "Allow only" : "Never forward";
+        return `${list}, rule ${nth}`;
+    }
+    if (a === "caption" && b === "replace" && nth) {
+        return `Replacement ${nth}`;
+    }
+    if (a === "caption" && b === "prepend") return "Text added before";
+    if (a === "caption" && b === "append") return "Text added after";
+    return "";
 }
 
 export type ValidationResult =
@@ -133,9 +45,10 @@ export function validateConfig(raw: unknown): ValidationResult {
     const parsed = routeConfigSchema.safeParse(raw ?? {});
     if (!parsed.success) {
         const first = parsed.error.issues[0];
+        const where = describe(first.path);
         return {
             ok: false,
-            error: `${first.path.join(".") || "config"}: ${first.message}`
+            error: where ? `${where}: ${first.message}` : first.message
         };
     }
     const config = parsed.data;

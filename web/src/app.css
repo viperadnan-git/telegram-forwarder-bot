@@ -37,8 +37,11 @@
         system-ui, sans-serif;
     --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
 
-    --r-lg: 16px;
-    --r-md: 11px;
+    /* Space between the top control and the first thing on a page. */
+    --top-gap: 32px;
+
+    --r-lg: 12px;
+    --r-md: 10px;
     --r-sm: 8px;
     --gutter: 16px;
 
@@ -99,74 +102,173 @@ button {
     padding: 0 var(--gutter) calc(var(--safe-bottom) + 48px);
 }
 
-/* --- page masthead ------------------------------------------------------ */
-
-.masthead {
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    padding: calc(var(--safe-top) + 22px) 2px 20px;
+/* First block on a page, when it is not a hero or a bar. */
+.page > .card:first-child,
+.page > .section-title:first-child,
+.page > .stagger:first-child {
+    margin-top: calc(var(--safe-top) + var(--top-gap));
 }
 
-/* Secondary to the primary action below, so an icon rather than a button. */
-.icon-btn {
+.sheet .page > .card:first-child,
+.sheet .page > .section-title:first-child {
+    margin-top: 0;
+}
+
+/* Sits inside .page, so cancel its gutter to land where the sheet bar does. */
+.topbar {
+    margin: 0 calc(var(--gutter) * -1);
+    padding: calc(var(--safe-top) + 9px) 10px 0;
+}
+
+/* --- page hero ---------------------------------------------------------- */
+
+.hero {
+    padding: var(--top-gap) var(--gutter) 14px;
+    text-align: center;
+}
+
+/* No bar above it to clear the inset, so it carries that too. */
+.page > .hero:first-child {
+    padding-top: calc(var(--safe-top) + var(--top-gap));
+}
+
+.hero .glyph {
+    display: block;
+    margin: 0 auto 18px;
+    color: var(--accent);
+}
+
+/* A paused route should not lead with a live-looking accent glyph. */
+.hero .glyph.muted {
+    color: var(--subtitle);
+}
+
+.hero .lede b {
+    font-weight: 600;
+    color: var(--text);
+}
+
+/* Bot avatar beside its name, in place of a row's glyph. */
+.avatar-sm {
     flex: none;
-    display: grid;
-    place-items: center;
     width: 38px;
     height: 38px;
-    margin-top: 2px;
     border-radius: 50%;
+    object-fit: cover;
+}
+
+/* A bigger picture needs less air beside it than a 22px glyph does. */
+.row:has(.avatar-sm) {
+    gap: 11px;
+    min-height: 54px;
+}
+
+.hero img.avatar {
+    display: block;
+    object-fit: cover;
+}
+
+.hero .avatar {
+    display: grid;
+    place-items: center;
+    width: 72px;
+    height: 72px;
+    margin: 0 auto 18px;
+    border-radius: 50%;
+    background: var(--fill);
     color: var(--accent);
-    background: var(--section);
 }
 
-.icon-btn:active {
-    background: var(--fill-strong);
-}
-
-.icon-btn:disabled {
-    opacity: 0.5;
-    cursor: default;
-}
-
-.icon-btn.busy svg {
-    animation: spin 0.9s linear infinite;
-}
-
-@keyframes spin {
-    to {
-        transform: rotate(360deg);
-    }
-}
-
-.masthead h1 {
+.hero h1 {
     margin: 0;
-    font-size: 28px;
+    font-size: 23px;
     font-weight: 700;
     letter-spacing: -0.02em;
 }
 
-.masthead p {
-    margin: 3px 0 0;
-    color: var(--subtitle);
+.hero .lede {
+    margin: 8px auto 0;
+    max-width: 34ch;
     font-size: 14px;
+    line-height: 1.3;
+    color: var(--subtitle);
+}
+
+.hero .lede a {
+    color: var(--accent);
+    text-decoration: none;
 }
 
 .section-title {
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--section-header);
-    text-transform: uppercase;
-    letter-spacing: 0.07em;
-    margin: 26px 2px 9px;
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--text);
+    margin: 24px var(--gutter) 8px;
+}
+
+/* A section header can carry one control, e.g. a language picker. */
+.section-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 24px var(--gutter) 8px;
+}
+
+.section-head .section-title {
+    margin: 0;
+    flex: 1;
+}
+
+/* The handle under a group name, as BotFather sets a bot's @username. */
+.section-sub {
+    margin: 2px var(--gutter) 8px;
+    font-size: 13px;
+    color: var(--subtitle);
+}
+
+.section-title + .section-sub {
+    margin-top: -8px;
 }
 
 .note {
     font-size: 13px;
-    line-height: 1.4;
+    line-height: 1.35;
     color: var(--subtitle);
-    margin: 9px 2px 0;
+    margin: 11px var(--gutter) 0;
+}
+
+.note.invalid-note {
+    color: var(--destructive);
+}
+
+.field > .note {
+    margin-left: 0;
+    margin-right: 0;
+}
+
+.row-value.invalid-value {
+    color: var(--destructive);
+}
+
+.note a,
+.note .more {
+    color: var(--accent);
+    text-decoration: none;
+}
+
+/* Centred, link-bearing legal-style footer. */
+.page-footer {
+    margin: 24px var(--gutter) 0;
+    font-size: 13px;
+    line-height: 1.35;
+    text-align: center;
+    color: var(--subtitle);
+}
+
+.page-footer a {
+    color: var(--accent);
+    text-decoration: none;
 }
 
 /* --- patch bay: one source, many destinations ---------------------------
@@ -273,7 +375,7 @@ button {
 
 .cid {
     font-family: var(--mono);
-    font-size: 15px;
+    font-size: 13px;
     font-variant-numeric: tabular-nums;
     letter-spacing: -0.02em;
     white-space: nowrap;
@@ -287,7 +389,7 @@ button {
 }
 
 .chat-name {
-    font-size: 16px;
+    font-size: 14px;
     font-weight: 500;
     line-height: 1.25;
     overflow: hidden;
@@ -307,7 +409,7 @@ button {
 }
 
 .sub {
-    font-size: 13px;
+    font-size: 12px;
     color: var(--subtitle);
     margin-top: 2px;
 }
@@ -351,6 +453,128 @@ button.chip {
     font-size: 19px;
 }
 
+/* --- source to destination linkage ------------------------------------- */
+
+.linkage {
+    --node: 22px;
+    --node-x: calc(var(--gutter) + var(--node) / 2);
+    margin-bottom: 10px;
+}
+
+.link-source,
+.link-dest {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 13px;
+    width: 100%;
+    min-height: 44px;
+    padding: 8px var(--gutter);
+    text-align: left;
+}
+
+.link-dest:has(.link-hit:active) {
+    background: var(--fill);
+}
+
+.link-dest {
+    transition: background-color 0.4s ease-out;
+}
+
+/* The node is the fixed point both the rail and the labels align to. */
+.link-node {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: var(--node);
+    height: var(--node);
+    border-radius: 50%;
+    background: var(--tint);
+    color: var(--accent);
+}
+
+.link-source .link-node {
+    background: var(--accent);
+    color: var(--button-text);
+}
+
+/* Runs into this node from above, which is what reads as linkage. */
+.link-rail {
+    position: absolute;
+    left: calc(var(--node-x) - 1px);
+    top: 0;
+    width: 2px;
+    height: calc(50% - var(--node) / 2);
+    background: var(--tint-strong);
+}
+
+/* And out of the source downwards, so the line is unbroken end to end. */
+.link-rail.down {
+    top: calc(50% + var(--node) / 2);
+    height: calc(50% - var(--node) / 2);
+}
+
+/* Name on the first line, id on its own beneath it. */
+.link-source > .grow,
+.link-dest > .grow {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    min-width: 0;
+}
+
+/* Full-row tap target, behind the content so the id can sit on top of it. */
+.link-hit {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+}
+
+.link-dest > .grow,
+.link-dest > .chevron,
+.link-dest > .link-node {
+    position: relative;
+    z-index: 1;
+    pointer-events: none;
+}
+
+.cid-copy {
+    pointer-events: auto;
+}
+
+.cid-copy {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 3px;
+    padding: 2px 0;
+    color: var(--text);
+}
+
+/* Chips read as status on the line below the id. */
+.link-dest .chips {
+    margin-top: 5px;
+}
+
+.cid-copy:active {
+    opacity: 0.55;
+}
+
+.cid-copy .copied {
+    font-size: 13px;
+    color: var(--accent);
+}
+
+.link-dest.paused .chat-name,
+.link-dest.paused .cid {
+    opacity: 0.5;
+}
+
+.link-dest.paused .link-node {
+    background: var(--fill-strong);
+    color: var(--subtitle);
+}
+
 /* --- cards and rows ----------------------------------------------------- */
 
 .card {
@@ -362,15 +586,42 @@ button.chip {
 .row {
     display: flex;
     align-items: center;
-    gap: 13px;
+    gap: 16px;
     width: 100%;
-    min-height: 46px;
-    padding: 11px var(--gutter);
+    min-height: 44px;
+    padding: 8px var(--gutter);
     text-align: left;
 }
 
+/* Monochrome outline glyph, same box for every row so labels line up. */
+.row .icon {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    color: var(--text);
+}
+
+.row.accent .row-label,
+.row.accent .icon {
+    color: var(--accent);
+}
+
+.row.destructive .row-label,
+.row.destructive .icon {
+    color: var(--destructive);
+}
+
+/* Current value, read before the chevron. */
+.row-value {
+    flex: none;
+    color: var(--subtitle);
+    font-size: 15px;
+}
+
 .field {
-    padding: 12px var(--gutter);
+    padding: 10px var(--gutter);
 }
 
 .row + .row,
@@ -380,14 +631,35 @@ button.chip {
     box-shadow: inset 0 0.5px 0 var(--separator);
 }
 
+/* Inset to align with the label when the rows above and below carry icons. */
+.card.inset-rules .row + .row {
+    box-shadow: none;
+    position: relative;
+}
+
+.card.inset-rules .row + .row::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: calc(var(--gutter) + 22px + 16px);
+    right: 0;
+    height: 0.5px;
+    background: var(--separator);
+}
+
 .row:active {
     background: var(--fill);
+}
+
+.row:disabled {
+    opacity: 0.4;
+    cursor: default;
 }
 
 /* Children must be block-level even when the row is a <button> of spans. */
 .row-label {
     display: block;
-    font-size: 16px;
+    font-size: 15px;
     line-height: 1.3;
 }
 
@@ -436,28 +708,49 @@ button.chip {
     margin: 0 2px 14px;
 }
 
+/* Label on the left, its remove action on the right. */
+.field-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.field-head .field-label {
+    margin: 0;
+    flex: 1;
+}
+
+/* Two short options on one line; wraps rather than overflowing if narrow. */
+.checks {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 9px 20px;
+    margin-top: 11px;
+}
+
 /* --- form controls ------------------------------------------------------ */
 
 .field > label,
 .field-label {
     display: block;
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 600;
     letter-spacing: 0.03em;
     text-transform: uppercase;
     color: var(--section-header);
-    margin-bottom: 7px;
+    margin-bottom: 6px;
 }
 
 .input {
     width: 100%;
-    padding: 11px 13px;
+    padding: 8px 11px;
     font: inherit;
-    font-size: 16px;
+    font-size: 15px;
     color: var(--text);
     background: var(--fill);
     border: 1.5px solid transparent;
-    border-radius: var(--r-md);
+    border-radius: 8px;
     transition:
         border-color 0.15s ease,
         background 0.15s ease;
@@ -553,11 +846,11 @@ button.chip {
 .switch {
     flex: none;
     display: block;
-    width: 51px;
-    height: 31px;
+    width: 44px;
+    height: 26px;
     border-radius: 999px;
-    background: var(--fill-strong);
-    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--hint) 18%, transparent);
+    background: var(--destructive);
+    box-shadow: none;
     padding: 2px;
     transition:
         background 0.22s ease,
@@ -571,8 +864,8 @@ button.chip {
 
 .switch > span {
     display: block;
-    width: 27px;
-    height: 27px;
+    width: 22px;
+    height: 22px;
     border-radius: 50%;
     background: #fff;
     box-shadow:
@@ -582,7 +875,7 @@ button.chip {
 }
 
 [aria-checked="true"] > .switch > span {
-    transform: translateX(20px);
+    transform: translateX(18px);
 }
 
 /* Focus belongs on the row, which is the control. */
@@ -601,9 +894,9 @@ button.chip {
 }
 
 .segmented button {
-    padding: 5px 13px;
+    padding: 4px 11px;
     border-radius: 6px;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 500;
     color: var(--subtitle);
     transition:
@@ -620,12 +913,55 @@ button.chip {
 
 .btn {
     width: 100%;
-    padding: 14px;
-    border-radius: var(--r-md);
+    min-height: 42px;
+    padding: 11px;
+    border-radius: 9px;
     background: var(--button);
     color: var(--button-text);
-    font-size: 16px;
+    font-size: 15px;
     font-weight: 600;
+}
+
+/* Two equal actions on one line, as on BotFather's token card. */
+.btn-pair {
+    display: flex;
+    gap: 12px;
+}
+
+.btn-pair .btn {
+    flex: 1;
+}
+
+.btn.solid-danger {
+    background: var(--destructive);
+    color: #fff;
+}
+
+/* Dark pill under a hero avatar: secondary, and clearly not the page action. */
+.pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 6px 13px;
+    border-radius: 999px;
+    background: var(--fill);
+    color: var(--text);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.pill.accent {
+    background: var(--tint);
+    color: var(--accent);
+}
+
+.pill:active {
+    background: var(--fill-strong);
+}
+
+.pill:disabled {
+    opacity: 0.4;
+    cursor: default;
 }
 
 .btn:disabled {
@@ -654,7 +990,7 @@ button.chip {
 
 .link {
     color: var(--accent);
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 500;
 }
 
@@ -688,6 +1024,13 @@ button.chip {
     background-repeat: no-repeat;
     border-radius: 6px;
     animation: shimmer 1.35s ease-in-out infinite;
+}
+
+.sk.node-sk {
+    width: var(--node);
+    height: var(--node);
+    border-radius: 50%;
+    flex: none;
 }
 
 .sk.dot-sk {
@@ -856,12 +1199,18 @@ a {
 
 /* --- editor frame ------------------------------------------------------- */
 
+body.sheet-open {
+    overflow: hidden;
+}
+
 .sheet {
     position: fixed;
     inset: 0;
     z-index: 10;
     background: var(--bg);
     overflow-y: auto;
+    /* Reaching the end of a sheet must not scroll whatever is underneath it. */
+    overscroll-behavior: contain;
     animation: rise 0.24s cubic-bezier(0.32, 0.72, 0, 1);
 }
 
@@ -869,92 +1218,38 @@ a {
     position: sticky;
     top: 0;
     z-index: 2;
-    display: flex;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
     align-items: center;
-    gap: 12px;
-    padding: calc(var(--safe-top) + 11px) var(--gutter) 11px;
+    gap: 10px;
+    padding: calc(var(--safe-top) + 9px) 10px 9px;
     background: var(--bg);
     box-shadow: inset 0 -0.5px 0 var(--separator);
 }
 
+.sheet-bar > :first-child {
+    justify-self: start;
+}
+
+.sheet-bar > :last-child {
+    justify-self: end;
+}
+
+/* Content would otherwise start flush against the sticky bar. */
+.sheet .page {
+    padding-top: var(--top-gap);
+}
+
+/* The page padding above already provides the gap. */
+.sheet .hero {
+    padding-top: 0;
+}
+
 .sheet-title {
-    flex: 1;
     text-align: center;
-    font-size: 16px;
-    font-weight: 600;
-}
-
-/* --- route header (editor): stacked full-width rows, so names wrap ------- */
-
-.endpoints {
-    margin-top: 6px;
-}
-
-.endpoint {
-    display: flex;
-    align-items: flex-start;
-    gap: 11px;
-    padding: 9px var(--gutter);
-}
-
-.endpoint + .endpoint {
-    box-shadow: inset 0 0.5px 0 var(--separator);
-}
-
-.endpoint > .dot {
-    margin-top: 3px;
-}
-
-.endpoint-role {
-    font-size: 10px;
-    line-height: 1.3;
-    font-weight: 600;
-    letter-spacing: 0.07em;
-    text-transform: uppercase;
-    color: var(--section-header);
-}
-
-/* Wraps, unlike the list. */
-.endpoint-name {
     font-size: 15px;
-    font-weight: 500;
-    line-height: 1.25;
-    margin-top: 1px;
-    overflow-wrap: anywhere;
-}
-
-.id-copy {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    margin-top: 1px;
-    padding: 1px 8px 1px 0;
-    border-radius: 5px;
-    color: var(--subtitle);
-}
-
-.id-copy .cid {
-    font-size: 12px;
-    white-space: normal;
-    overflow: visible;
-    overflow-wrap: anywhere;
-}
-
-/* biome-ignore lint/style/noDescendingSpecificity: .icon-btn.busy svg is a
-   different component; these never match the same element. */
-.id-copy svg {
-    flex: none;
-    opacity: 0.55;
-}
-
-.id-copy:active {
-    color: var(--accent);
-}
-
-.id-copy .copied {
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--accent);
+    font-weight: 600;
+    white-space: nowrap;
 }
 
 @keyframes rise {
@@ -973,6 +1268,10 @@ a {
 
 .stagger > * {
     animation: settle 0.28s cubic-bezier(0.32, 0.72, 0, 1) backwards;
+}
+
+.stagger {
+    margin-top: 22px;
 }
 
 @media (prefers-reduced-motion: reduce) {

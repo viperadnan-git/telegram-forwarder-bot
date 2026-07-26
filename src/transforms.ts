@@ -56,11 +56,24 @@ function applyEdit(input: TextAndEntities, edit: Edit): TextAndEntities {
     return { text, entities };
 }
 
+/** So a literal can be handed to RE2 without its punctuation meaning anything. */
+const escapeLiteral = (text: string) =>
+    text.replace(/[\\.+*?()|[\]{}^$]/g, "\\$&");
+
 function literalEdits(
     text: string,
     needle: string,
-    replacement: string
+    replacement: string,
+    caseSensitive: boolean
 ): Edit[] {
+    // Case folding can change a string's length — "\u0130" lowercases to two code
+    // units — which would shift every later index away from the original text
+    // the entity maths is indexed against. RE2 folds while matching the
+    // original, so the spans stay true.
+    if (!caseSensitive) {
+        return regexEdits(text, escapeLiteral(needle), replacement, false);
+    }
+
     const edits: Edit[] = [];
     let i = text.indexOf(needle);
     while (i !== -1) {
@@ -73,9 +86,12 @@ function literalEdits(
 function regexEdits(
     text: string,
     pattern: string,
-    replacement: string
+    replacement: string,
+    caseSensitive: boolean
 ): Edit[] {
-    return matchSpans(pattern, text).map(({ start, end }) => ({
+    // RE2 takes the flag inline; there is no flags argument to pass.
+    const source = caseSensitive ? pattern : `(?i)${pattern}`;
+    return matchSpans(source, text).map(({ start, end }) => ({
         start,
         end,
         replacement
@@ -137,8 +153,18 @@ export function applyCaption(
     for (const rule of caption.replace) {
         edits.push(
             ...(rule.isRegex
-                ? regexEdits(input.text, rule.pattern, rule.replacement)
-                : literalEdits(input.text, rule.pattern, rule.replacement))
+                ? regexEdits(
+                      input.text,
+                      rule.pattern,
+                      rule.replacement,
+                      rule.caseSensitive
+                  )
+                : literalEdits(
+                      input.text,
+                      rule.pattern,
+                      rule.replacement,
+                      rule.caseSensitive
+                  ))
         );
     }
 

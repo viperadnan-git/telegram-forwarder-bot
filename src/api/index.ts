@@ -5,6 +5,7 @@ import express, {
     type Router
 } from "express";
 import { getBotById } from "../bot";
+import { claimBot, describeBot } from "../clone";
 import { validateConfig } from "../config";
 import { sourceKeyboard } from "../handlers/pick";
 import logger from "../modules/logger";
@@ -20,8 +21,11 @@ type AuthedRequest = Request & { botId: number; userId: number };
 const MAX_INITDATA_AGE_SECONDS =
     Number(process.env.INITDATA_MAX_AGE_SECONDS) || 86_400;
 
-/** A valid signature proves identity, not ownership; both are checked. */
-async function authenticate(req: Request, res: Response, next: NextFunction) {
+/**
+ * A valid signature proves identity, not ownership. They are separate steps
+ * because cloning is offered to people who are explicitly not the owner.
+ */
+function identify(req: Request, res: Response, next: NextFunction) {
     const header = req.get("authorization") ?? "";
     const initData = header.startsWith("tma ") ? header.slice(4) : "";
     const botId = Number(req.get("x-bot-id"));
@@ -40,7 +44,15 @@ async function authenticate(req: Request, res: Response, next: NextFunction) {
         return;
     }
 
+    (req as AuthedRequest).botId = botId;
+    (req as AuthedRequest).userId = result.user.id;
+    next();
+}
+
+async function requireOwner(req: Request, res: Response, next: NextFunction) {
+    const { botId, userId } = req as AuthedRequest;
     const owner = await db.getOwner(botId);
+
     if (owner === undefined) {
         res.status(403).json({
             reason: "unclaimed",
@@ -48,16 +60,13 @@ async function authenticate(req: Request, res: Response, next: NextFunction) {
         });
         return;
     }
-    if (owner !== result.user.id) {
+    if (owner !== userId) {
         res.status(403).json({
             reason: "not_owner",
             error: "This bot belongs to someone else"
         });
         return;
     }
-
-    (req as AuthedRequest).botId = botId;
-    (req as AuthedRequest).userId = result.user.id;
     next();
 }
 
@@ -73,8 +82,40 @@ const asHandler =
 export function createApiRouter(): Router {
     const router = express.Router();
     // Body parsing is global in index.ts; a second parser here would no-op.
+    router.use(identify);
+
+    // Cloning is the one thing a non-owner may do, so it is mounted above the
+    // ownership gate. Everything below this point is owner-only.
+    router.post(
+        "/clone/check",
+        asHandler(async (req, res) => {
+            const info = await describeBot(String(req.body?.token ?? ""));
+            if (!info.ok) {
+                res.status(400).json({ error: info.error });
+                return;
+            }
+            res.json({ bot: info.bot });
+        })
+    );
+
+    router.post(
+        "/clone",
+        asHandler(async (req, res) => {
+            const token = String(req.body?.token ?? "");
+            const result = await claimBot(token, req.userId);
+            if (!result.ok) {
+                res.status(400).json({ error: result.error });
+                return;
+            }
+            res.json({
+                bot: result.bot,
+                alreadyRunning: result.alreadyRunning
+            });
+        })
+    );
+
     router.use((req, res, next) => {
-        authenticate(req, res, next).catch(next);
+        requireOwner(req, res, next).catch(next);
     });
 
     router.get(
@@ -127,11 +168,22 @@ export function createApiRouter(): Router {
                 return;
             }
 
-            await bot.api.sendMessage(
-                req.userId,
-                "<b>Step 1 of 2</b> — choose the chat to forward <b>from</b>.",
-                { parse_mode: "HTML", reply_markup: sourceKeyboard() }
-            );
+            try {
+                await bot.api.sendMessage(
+                    req.userId,
+                    "<b>Step 1 of 2</b> — choose the chat to forward <b>from</b>.",
+                    { parse_mode: "HTML", reply_markup: sourceKeyboard() }
+                );
+            } catch (err: any) {
+                const why = err.description ?? err.message ?? "unknown error";
+                logger.warn(
+                    `Could not open the picker for ${req.userId}: ${why}`
+                );
+                res.status(502).json({
+                    error: `Telegram would not let me message you: ${why}`
+                });
+                return;
+            }
             res.status(204).end();
         })
     );

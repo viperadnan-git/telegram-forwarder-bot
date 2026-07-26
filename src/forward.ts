@@ -67,7 +67,17 @@ function transformed(
     msg: Message,
     limit: number
 ): TextAndEntities {
-    return clamp(applyCaption(config.caption, contentOf(msg)), limit);
+    const input = contentOf(msg);
+    const out = clamp(applyCaption(config.caption, input), limit);
+    // A caption rule that quietly does nothing is hard to diagnose from the
+    // outside. Only the no-op case is worth a line, and only its length: this
+    // instance hosts other people's bots and the text is their users' chat.
+    if (out.text === input.text) {
+        logger.debug(
+            `Caption rules changed nothing (${input.text.length} chars)`
+        );
+    }
+    return out;
 }
 
 async function deliverSingle(

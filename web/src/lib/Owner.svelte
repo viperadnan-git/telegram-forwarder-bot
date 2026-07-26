@@ -1,8 +1,11 @@
 <script lang="ts">
 import * as api from "./api";
+import BackBar from "./BackBar.svelte";
+import Hero from "./Hero.svelte";
 import { close, confirm, copyText, haptic, myId } from "./telegram";
 
-let { onback }: { onback: () => void } = $props();
+let { onback, backLabel = "Back" }: { onback: () => void; backLabel?: string } =
+    $props();
 
 let input = $state("");
 let busy = $state(false);
@@ -43,21 +46,15 @@ async function handOver() {
 </script>
 
 <div class="page">
-    <header class="masthead">
-        {#if !handedTo}
-            <button type="button" class="icon-btn" aria-label="Back" onclick={onback}>
-                <svg width="19" height="19" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
-                    stroke-linejoin="round" aria-hidden="true">
-                    <path d="M15 18l-6-6 6-6" />
-                </svg>
-            </button>
-        {/if}
-        <div class="grow">
-            <h1>Owner</h1>
-            <p>{handedTo ? "Handed over" : "You own this bot"}</p>
-        </div>
-    </header>
+    {#if !handedTo}
+        <BackBar {onback} label={backLabel} />
+    {/if}
+
+    <Hero icon="owner" title="Owner">
+        {handedTo
+            ? "This bot has a new owner."
+            : "Only the owner can open these settings or change what the bot forwards."}
+    </Hero>
 
     {#if handedTo}
         <div class="card">
@@ -75,12 +72,6 @@ async function handOver() {
         </div>
     {:else}
         <div class="card">
-            <div class="field">
-                <p class="prose">
-                    Only the owner can open these settings or change what the bot
-                    forwards. Everyone else gets turned away.
-                </p>
-            </div>
             {#if mine !== undefined}
                 <button type="button" class="row" onclick={copyMine}>
                     <span class="grow">

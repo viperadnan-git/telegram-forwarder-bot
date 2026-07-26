@@ -12,6 +12,11 @@ type WebApp = {
         notificationOccurred(t: "error" | "success" | "warning"): void;
     };
     showConfirm?(message: string, cb: (ok: boolean) => void): void;
+    BackButton?: {
+        show(): void;
+        hide(): void;
+        onClick(cb: () => void): void;
+    };
 };
 
 export const webApp: WebApp | undefined = (globalThis as any).Telegram?.WebApp;
@@ -40,6 +45,14 @@ export function init() {
 }
 
 export const close = () => webApp?.close();
+
+/** Telegram's own back control, so the system gesture matches the in-app one. */
+export function backButton(visible: boolean) {
+    if (visible) webApp?.BackButton?.show();
+    else webApp?.BackButton?.hide();
+}
+
+export const onBackButton = (cb: () => void) => webApp?.BackButton?.onClick(cb);
 
 export const openTelegramLink = (url: string) => {
     if (webApp?.openTelegramLink) webApp.openTelegramLink(url);

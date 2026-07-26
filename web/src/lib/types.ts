@@ -1,56 +1,17 @@
-export const MEDIA_KINDS = [
-    "text",
-    "photo",
-    "video",
-    "animation",
-    "audio",
-    "document",
-    "sticker",
-    "voice",
-    "video_note",
-    "poll",
-    "contact",
-    "location",
-    "dice",
-    "paid_media"
-] as const;
+export {
+    defaultConfig,
+    MATCH_TARGETS,
+    type MatchTarget,
+    MEDIA_KINDS,
+    type MediaKind,
+    type RouteConfig,
+    type Rule,
+    withDefaults
+} from "$schema";
 
-export type MediaKind = (typeof MEDIA_KINDS)[number];
+import type { RouteConfig } from "$schema";
 
-export type MatchTarget = "text" | "filename";
-
-export type Rule =
-    | {
-          type: "keyword";
-          value: string;
-          caseSensitive?: boolean;
-          target: MatchTarget;
-      }
-    | { type: "regex"; pattern: string; target: MatchTarget }
-    | { type: "media"; kinds: MediaKind[] }
-    | { type: "sender"; ids: number[]; usernames: string[] };
-
-export type Replacement = {
-    pattern: string;
-    replacement: string;
-    isRegex: boolean;
-};
-
-export type RouteConfig = {
-    mode: "copy" | "forward";
-    protectContent: boolean;
-    silent: boolean;
-    removeButtons: boolean;
-    filters: { whitelist: Rule[]; blacklist: Rule[] };
-    caption: {
-        strip: boolean;
-        prepend?: string;
-        append?: string;
-        replace: Replacement[];
-        removeLinks: boolean;
-        removeMentions: boolean;
-    };
-};
+export type Replacement = RouteConfig["caption"]["replace"][number];
 
 export type Route = {
     id: string;
@@ -87,28 +48,3 @@ export function relativeTime(iso?: string): string {
     }
     return fmt.format(Math.round(seconds), "second");
 }
-
-export const defaultConfig = (): RouteConfig => ({
-    mode: "copy",
-    protectContent: false,
-    silent: false,
-    removeButtons: false,
-    filters: { whitelist: [], blacklist: [] },
-    caption: {
-        strip: false,
-        replace: [],
-        removeLinks: false,
-        removeMentions: false
-    }
-});
-
-/** Server stores partial config; fill the gaps for editing. */
-export const withDefaults = (config: Partial<RouteConfig>): RouteConfig => {
-    const base = defaultConfig();
-    return {
-        ...base,
-        ...config,
-        filters: { ...base.filters, ...config.filters },
-        caption: { ...base.caption, ...config.caption }
-    };
-};
