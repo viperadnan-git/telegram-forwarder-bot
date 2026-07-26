@@ -1,0 +1,889 @@
+/* Palette is Telegram's semantic theme, so the app follows the user's. */
+:root {
+    --bg: var(--tg-theme-secondary-bg-color, #f2f2f7);
+    --section: var(--tg-theme-section-bg-color, var(--tg-theme-bg-color, #fff));
+    --text: var(--tg-theme-text-color, #000);
+    --subtitle: var(--tg-theme-subtitle-text-color, #8a8a8e);
+    --hint: var(--tg-theme-hint-color, #8a8a8e);
+    --section-header: var(--tg-theme-section-header-text-color, #6d6d72);
+    --separator: var(--tg-theme-section-separator-color, rgba(120, 120, 128, 0.24));
+    --accent: var(--tg-theme-accent-text-color, var(--tg-theme-link-color, #007aff));
+    --button: var(--tg-theme-button-color, #007aff);
+    --button-text: var(--tg-theme-button-text-color, #fff);
+    --destructive: var(--tg-theme-destructive-text-color, #ff3b30);
+
+    --tint: color-mix(in srgb, var(--accent) 12%, transparent);
+    --tint-strong: color-mix(in srgb, var(--accent) 22%, transparent);
+    --fill: color-mix(in srgb, var(--hint) 12%, transparent);
+    --fill-strong: color-mix(in srgb, var(--hint) 20%, transparent);
+
+    --safe-bottom: var(--tg-content-safe-area-inset-bottom, env(safe-area-inset-bottom, 0px));
+    --safe-top: var(--tg-content-safe-area-inset-top, env(safe-area-inset-top, 0px));
+
+    --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto,
+        system-ui, sans-serif;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
+
+    --r-lg: 16px;
+    --r-md: 11px;
+    --r-sm: 8px;
+    --gutter: 16px;
+
+    color-scheme: light dark;
+    font: 17px/1.35 var(--sans);
+    -webkit-font-smoothing: antialiased;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    overscroll-behavior-y: none;
+}
+
+button {
+    font: inherit;
+    color: inherit;
+    border: 0;
+    background: none;
+    cursor: pointer;
+}
+
+/* The webview's own tap rectangle fights the :active styles below. */
+* {
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* Instant on touch-down, fade out on release. Symmetrical timing reads as a flash. */
+.row,
+.drop,
+.btn,
+.icon-btn {
+    transition: background-color 0.4s ease-out;
+}
+
+.row:active,
+.drop:active,
+.btn:active,
+.icon-btn:active {
+    transition-duration: 0s;
+}
+
+:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 6px;
+}
+
+.page {
+    max-width: 620px;
+    margin: 0 auto;
+    padding: 0 var(--gutter) calc(var(--safe-bottom) + 48px);
+}
+
+/* --- page masthead ------------------------------------------------------ */
+
+.masthead {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: calc(var(--safe-top) + 22px) 2px 20px;
+}
+
+/* Secondary to the primary action below, so an icon rather than a button. */
+.icon-btn {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 38px;
+    height: 38px;
+    margin-top: 2px;
+    border-radius: 50%;
+    color: var(--accent);
+    background: var(--section);
+}
+
+.icon-btn:active {
+    background: var(--fill-strong);
+}
+
+.icon-btn:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+.icon-btn.busy svg {
+    animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.masthead h1 {
+    margin: 0;
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+}
+
+.masthead p {
+    margin: 3px 0 0;
+    color: var(--subtitle);
+    font-size: 14px;
+}
+
+.section-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--section-header);
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    margin: 26px 2px 9px;
+}
+
+.note {
+    font-size: 13px;
+    line-height: 1.4;
+    color: var(--subtitle);
+    margin: 9px 2px 0;
+}
+
+/* --- patch bay: one source, many destinations ---------------------------
+   The rail is the signal path; a filled dot marks a destination whose config
+   differs from the default. */
+
+.bay {
+    background: var(--section);
+    border-radius: var(--r-lg);
+    padding: 4px 0;
+    margin-bottom: 12px;
+    overflow: hidden;
+}
+
+/* Derived so the parts meet: a 12px dot at --gutter centres on --gutter + 6,
+   and a 2px rail therefore sits at --gutter + 5. */
+:root {
+    --dot: 12px;
+    --rail-x: calc(var(--gutter) + 5px);
+    --branch-x: calc(var(--gutter) + 26px);
+}
+
+.node {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 13px;
+    padding: 13px var(--gutter) 11px;
+}
+
+/* Leaves the source dot, so the chain reads as one path. */
+.node::after {
+    content: "";
+    position: absolute;
+    left: var(--rail-x);
+    top: 50%;
+    bottom: -2px;
+    width: 2px;
+    background: var(--tint-strong);
+}
+
+.dot {
+    flex: none;
+    width: var(--dot);
+    height: var(--dot);
+    border-radius: 50%;
+    border: 2px solid var(--accent);
+    background: var(--accent);
+}
+
+.dot.hollow {
+    background: var(--section);
+    border-color: color-mix(in srgb, var(--hint) 60%, transparent);
+}
+
+.drop {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 13px;
+    width: 100%;
+    padding: 11px var(--gutter) 11px var(--branch-x);
+    text-align: left;
+}
+
+/* Last row stops at its own branch. */
+.drop::before {
+    content: "";
+    position: absolute;
+    left: var(--rail-x);
+    top: -2px;
+    bottom: -2px;
+    width: 2px;
+    background: var(--tint-strong);
+}
+
+.drop:last-child::before {
+    bottom: auto;
+    height: calc(50% + 2px);
+}
+
+/* Rail to the edge of the destination dot. */
+.drop::after {
+    content: "";
+    position: absolute;
+    left: var(--rail-x);
+    top: 50%;
+    transform: translateY(-1px);
+    width: calc(var(--branch-x) - var(--rail-x));
+    height: 2px;
+    background: var(--tint-strong);
+}
+
+.drop:active {
+    background: var(--fill);
+}
+
+.grow {
+    flex: 1;
+    min-width: 0;
+}
+
+/* Paused routes stay listed, but must not read as live. */
+.drop.paused .chat-name,
+.drop.paused .cid {
+    opacity: 0.45;
+}
+
+/* --- chat ids ----------------------------------------------------------- */
+
+.cid {
+    font-family: var(--mono);
+    font-size: 15px;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.cid .pre {
+    color: var(--hint);
+    opacity: 0.65;
+}
+
+
+.chat-name {
+    font-size: 16px;
+    font-weight: 500;
+    line-height: 1.25;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.cid.small {
+    font-size: 12px;
+    color: var(--subtitle);
+    margin-top: 1px;
+}
+
+.sub {
+    font-size: 13px;
+    color: var(--subtitle);
+    margin-top: 2px;
+}
+
+.chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 6px;
+}
+
+.chip {
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 18px;
+    padding: 0 8px;
+    border-radius: 999px;
+    background: var(--tint);
+    color: var(--accent);
+    white-space: nowrap;
+}
+
+/* Selectable chips: unselected reads as available, not active. */
+button.chip {
+    line-height: 24px;
+    padding: 0 11px;
+    transition:
+        background 0.14s ease,
+        color 0.14s ease;
+}
+
+.chip.off {
+    background: var(--fill);
+    color: var(--subtitle);
+}
+
+.chevron {
+    flex: none;
+    color: var(--hint);
+    opacity: 0.5;
+    font-size: 19px;
+}
+
+/* --- cards and rows ----------------------------------------------------- */
+
+.card {
+    background: var(--section);
+    border-radius: var(--r-lg);
+    overflow: hidden;
+}
+
+.row {
+    display: flex;
+    align-items: center;
+    gap: 13px;
+    width: 100%;
+    min-height: 46px;
+    padding: 11px var(--gutter);
+    text-align: left;
+}
+
+.row + .row,
+.row + .field,
+.field + .field,
+.field + .row {
+    box-shadow: inset 0 0.5px 0 var(--separator);
+}
+
+.row:active {
+    background: var(--fill);
+}
+
+/* Children must be block-level even when the row is a <button> of spans. */
+.row-label {
+    display: block;
+    font-size: 16px;
+    line-height: 1.3;
+}
+
+.row .sub {
+    display: block;
+}
+
+/* Numbered because the steps are a real sequence. */
+.step {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: var(--tint);
+    color: var(--accent);
+    font-size: 13px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+/* --- form controls ------------------------------------------------------ */
+
+.field {
+    padding: 12px var(--gutter);
+}
+
+.field > label,
+.field-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: var(--section-header);
+    margin-bottom: 7px;
+}
+
+.input {
+    width: 100%;
+    padding: 11px 13px;
+    font: inherit;
+    font-size: 16px;
+    color: var(--text);
+    background: var(--fill);
+    border: 1.5px solid transparent;
+    border-radius: var(--r-md);
+    transition:
+        border-color 0.15s ease,
+        background 0.15s ease;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.input::placeholder {
+    color: var(--hint);
+    opacity: 0.8;
+}
+
+.input:focus {
+    outline: none;
+    background: var(--section);
+    border-color: var(--accent);
+}
+
+.input.mono {
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+}
+
+.input.invalid {
+    border-color: var(--destructive);
+}
+
+.input + .input {
+    margin-top: 8px;
+}
+
+
+/* The native checkbox never matches Telegram's chrome. */
+.check {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--subtitle);
+}
+
+.check input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.check .box {
+    flex: none;
+    width: 21px;
+    height: 21px;
+    border-radius: 6px;
+    border: 1.5px solid color-mix(in srgb, var(--hint) 55%, transparent);
+    background: var(--section);
+    display: grid;
+    place-items: center;
+    transition:
+        background 0.14s ease,
+        border-color 0.14s ease;
+}
+
+.check .box::after {
+    content: "";
+    width: 10px;
+    height: 5.5px;
+    border-left: 2px solid var(--button-text);
+    border-bottom: 2px solid var(--button-text);
+    transform: rotate(-45deg) scale(0.5);
+    opacity: 0;
+    transition:
+        opacity 0.14s ease,
+        transform 0.14s ease;
+    margin-top: -2px;
+}
+
+.check input:checked + .box {
+    background: var(--button);
+    border-color: var(--button);
+}
+
+.check input:checked + .box::after {
+    opacity: 1;
+    transform: rotate(-45deg) scale(1);
+}
+
+.check input:focus-visible + .box {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+/* 2 + 27 + 20 + 2 = 51, so the knob lands flush at both ends. */
+.switch {
+    flex: none;
+    display: block;
+    width: 51px;
+    height: 31px;
+    border-radius: 999px;
+    background: var(--fill-strong);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--hint) 18%, transparent);
+    padding: 2px;
+    transition:
+        background 0.22s ease,
+        box-shadow 0.22s ease;
+}
+
+[aria-checked="true"] > .switch {
+    background: var(--button);
+    box-shadow: none;
+}
+
+.switch > span {
+    display: block;
+    width: 27px;
+    height: 27px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow:
+        0 3px 8px rgba(0, 0, 0, 0.15),
+        0 1px 1px rgba(0, 0, 0, 0.16);
+    transition: transform 0.22s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+[aria-checked="true"] > .switch > span {
+    transform: translateX(20px);
+}
+
+/* Focus belongs on the row, which is the control. */
+.row[role="switch"]:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+}
+
+.segmented {
+    display: flex;
+    gap: 2px;
+    padding: 2px;
+    border-radius: var(--r-sm);
+    background: var(--fill-strong);
+    flex: none;
+}
+
+.segmented button {
+    padding: 5px 13px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--subtitle);
+    transition:
+        background 0.15s ease,
+        color 0.15s ease;
+}
+
+.segmented button[aria-pressed="true"] {
+    background: var(--section);
+    color: var(--text);
+    font-weight: 600;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+.btn {
+    width: 100%;
+    padding: 14px;
+    border-radius: var(--r-md);
+    background: var(--button);
+    color: var(--button-text);
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.btn:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+.btn.secondary {
+    background: var(--section);
+    color: var(--accent);
+}
+
+.btn.secondary:active {
+    background: var(--fill);
+}
+
+/* Tinted, not solid: findable without being the loudest thing on screen. */
+.btn.danger {
+    background: color-mix(in srgb, var(--destructive) 13%, transparent);
+    color: var(--destructive);
+}
+
+.btn.danger:active {
+    background: color-mix(in srgb, var(--destructive) 22%, transparent);
+}
+
+.link {
+    color: var(--accent);
+    font-size: 15px;
+    font-weight: 500;
+}
+
+.link.destructive {
+    color: var(--destructive);
+}
+
+/* --- states ------------------------------------------------------------- */
+
+.banner {
+    margin: 12px 0;
+    padding: 12px 14px;
+    border-radius: var(--r-md);
+    font-size: 14px;
+    line-height: 1.4;
+    background: color-mix(in srgb, var(--destructive) 12%, transparent);
+    color: var(--destructive);
+}
+
+/* --- loading: shaped like the real list, so nothing jumps ---------------- */
+
+.sk {
+    background: var(--fill);
+    background-image: linear-gradient(
+        90deg,
+        transparent 0%,
+        color-mix(in srgb, var(--hint) 14%, transparent) 45%,
+        transparent 90%
+    );
+    background-size: 260% 100%;
+    background-repeat: no-repeat;
+    border-radius: 6px;
+    animation: shimmer 1.35s ease-in-out infinite;
+}
+
+.sk.dot-sk {
+    width: var(--dot);
+    height: var(--dot);
+    border-radius: 50%;
+    flex: none;
+    animation-delay: 0.1s;
+}
+
+@keyframes shimmer {
+    from {
+        background-position: 160% 0;
+    }
+    to {
+        background-position: -60% 0;
+    }
+}
+
+/* The shimmer is aria-hidden; this is what gets announced. */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+}
+
+.empty {
+    text-align: center;
+    padding: 44px var(--gutter) 40px;
+    background: var(--section);
+    border-radius: var(--r-lg);
+}
+
+.empty strong {
+    display: block;
+    font-size: 17px;
+    font-weight: 600;
+    margin-bottom: 5px;
+}
+
+.empty p {
+    margin: 0;
+    color: var(--subtitle);
+    font-size: 14px;
+    line-height: 1.45;
+}
+
+/* --- dialog -------------------------------------------------------------- */
+
+.scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 20;
+    display: grid;
+    place-items: center;
+    padding: var(--gutter);
+    background: rgba(0, 0, 0, 0.45);
+    animation: fade 0.16s ease;
+}
+
+.dialog {
+    width: 100%;
+    max-width: 320px;
+    padding: 20px;
+    border-radius: 15px;
+    background: var(--section);
+    animation: pop 0.2s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.dialog h2 {
+    margin: 0 0 8px;
+    font-size: 17px;
+    font-weight: 600;
+}
+
+.dialog p {
+    margin: 0 0 10px;
+    font-size: 14px;
+    line-height: 1.45;
+    color: var(--subtitle);
+}
+
+.dialog .actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 18px;
+}
+
+.dialog .actions .btn {
+    padding: 11px;
+}
+
+@keyframes fade {
+    from {
+        opacity: 0;
+    }
+}
+
+@keyframes pop {
+    from {
+        transform: scale(0.96);
+        opacity: 0;
+    }
+}
+
+/* --- editor frame ------------------------------------------------------- */
+
+.sheet {
+    position: fixed;
+    inset: 0;
+    z-index: 10;
+    background: var(--bg);
+    overflow-y: auto;
+    animation: rise 0.24s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.sheet-bar {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: calc(var(--safe-top) + 11px) var(--gutter) 11px;
+    background: var(--bg);
+    box-shadow: inset 0 -0.5px 0 var(--separator);
+}
+
+.sheet-title {
+    flex: 1;
+    text-align: center;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+/* --- route header (editor): stacked full-width rows, so names wrap ------- */
+
+.endpoints {
+    margin-top: 6px;
+}
+
+.endpoint {
+    display: flex;
+    align-items: flex-start;
+    gap: 11px;
+    padding: 9px var(--gutter);
+}
+
+.endpoint + .endpoint {
+    box-shadow: inset 0 0.5px 0 var(--separator);
+}
+
+.endpoint > .dot {
+    margin-top: 3px;
+}
+
+.endpoint-role {
+    font-size: 10px;
+    line-height: 1.3;
+    font-weight: 600;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--section-header);
+}
+
+/* Wraps, unlike the list. */
+.endpoint-name {
+    font-size: 15px;
+    font-weight: 500;
+    line-height: 1.25;
+    margin-top: 1px;
+    overflow-wrap: anywhere;
+}
+
+.id-copy {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 1px;
+    padding: 1px 8px 1px 0;
+    border-radius: 5px;
+    color: var(--subtitle);
+}
+
+.id-copy .cid {
+    font-size: 12px;
+    white-space: normal;
+    overflow: visible;
+    overflow-wrap: anywhere;
+}
+
+.id-copy svg {
+    flex: none;
+    opacity: 0.55;
+}
+
+.id-copy:active {
+    color: var(--accent);
+}
+
+.id-copy .copied {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--accent);
+}
+
+@keyframes rise {
+    from {
+        transform: translateY(16px);
+        opacity: 0;
+    }
+}
+
+@keyframes settle {
+    from {
+        transform: translateY(8px);
+        opacity: 0;
+    }
+}
+
+.stagger > * {
+    animation: settle 0.28s cubic-bezier(0.32, 0.72, 0, 1) backwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+    }
+}

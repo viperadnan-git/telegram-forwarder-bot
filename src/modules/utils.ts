@@ -1,5 +1,6 @@
-import { BotContext } from "../bot";
-import { ChatFullInfo } from "grammy/types";
+import type { Api } from "grammy";
+import type { ChatFullInfo } from "grammy/types";
+import { parseChatRef } from "../chatref";
 
 export const formatObject = (obj: {
     [key: string]: number[] | undefined;
@@ -23,25 +24,31 @@ export const formatObject = (obj: {
     return text;
 };
 
-export const parseEntity = (text: string): string | number => {
-    if (!isNaN(Number(text))) {
-        return Number(text);
-    } else if (text.match(/^@/)) {
-        return text;
-    } else {
-        return `@${text}`;
-    }
-};
+export type ResolveResult =
+    | { ok: true; chat: ChatFullInfo }
+    | { ok: false; error: string };
 
-export const getEntity = async (
-    ctx: BotContext,
-    chatId: string
-): Promise<ChatFullInfo | undefined> => {
+/** Resolves an id, @username or t.me link. Shared by the commands and the API. */
+export async function resolveChat(
+    api: Api,
+    input: string
+): Promise<ResolveResult> {
+    const parsed = parseChatRef(input);
+    if (!parsed.ok) return parsed;
+
+    const target =
+        parsed.ref.kind === "id" ? parsed.ref.id : `@${parsed.ref.username}`;
+
     try {
-        return await ctx.api.getChat(parseEntity(chatId));
+        return { ok: true, chat: await api.getChat(target) };
     } catch (error: any) {
-        if (error.error_code === 400) {
-            return;
+        const description: string = error.description ?? error.message ?? "";
+        if (/not found/i.test(description)) {
+            return {
+                ok: false,
+                error: "Chat not found. Add the bot to that chat first."
+            };
         }
+        return { ok: false, error: description || "Could not read that chat" };
     }
-};
+}

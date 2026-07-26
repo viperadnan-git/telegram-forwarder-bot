@@ -1,5 +1,5 @@
 {
-  "id": "b2642360-4c84-4520-a585-5634af9143a9",
+  "id": "cf08f329-44e0-4f04-8bb4-1a02618a6915",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -22,6 +22,52 @@
         },
         "created_at": {
           "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.chats": {
+      "name": "chats",
+      "schema": "",
+      "columns": {
+        "chat_id": {
+          "name": "chat_id",
+          "type": "bigint",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'Unnamed chat'"
+        },
+        "username": {
+          "name": "username",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'unknown'"
+        },
+        "type": {
+          "name": "type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "updated_at": {
+          "name": "updated_at",
           "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true,
@@ -122,6 +168,32 @@
             "bot_id"
           ],
           "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "routes_source_chat_id_chats_chat_id_fk": {
+          "name": "routes_source_chat_id_chats_chat_id_fk",
+          "tableFrom": "routes",
+          "tableTo": "chats",
+          "columnsFrom": [
+            "source_chat_id"
+          ],
+          "columnsTo": [
+            "chat_id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "routes_dest_chat_id_chats_chat_id_fk": {
+          "name": "routes_dest_chat_id_chats_chat_id_fk",
+          "tableFrom": "routes",
+          "tableTo": "chats",
+          "columnsFrom": [
+            "dest_chat_id"
+          ],
+          "columnsTo": [
+            "chat_id"
+          ],
+          "onDelete": "restrict",
           "onUpdate": "no action"
         }
       },

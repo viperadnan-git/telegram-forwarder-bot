@@ -1,7 +1,10 @@
 import { Bot, Composer, Context } from "grammy";
 import { ParseModeFlavor, parseMode } from "@grammyjs/parse-mode";
 
+import { autoRetry } from "@grammyjs/auto-retry";
 import bot_token_handler from "./handlers/bot_token";
+import chat_shared_handler from "./handlers/pick";
+import logger from "./modules/logger";
 import get_chat_handler from "./handlers/get_chat";
 import help_handler from "./handlers/help";
 import message_handler from "./handlers/message";
@@ -25,6 +28,8 @@ export const botCreator = (token: string) => {
         }
     });
     bot.api.config.use(parseMode("HTML"));
+    // Fan-out multiplies outgoing calls; honor retry_after on 429s.
+    bot.api.config.use(autoRetry({ maxRetryAttempts: 3, maxDelaySeconds: 30 }));
     bot.api.setMyCommands([
         {
             command: "start",
@@ -36,7 +41,7 @@ export const botCreator = (token: string) => {
         },
         {
             command: "set",
-            description: "Set a new chat forwarding"
+            description: "Add forwarding — pick chats from a list"
         },
         {
             command: "get",
@@ -50,11 +55,42 @@ export const botCreator = (token: string) => {
             command: "set_owner",
             description: "Set the owner of the bot"
         }
-    ]);
+        // A revoked token rejects here; unhandled it kills the process.
+    ]).catch((err) =>
+        logger.warn(`Could not set commands for bot: ${err.message}`)
+    );
+
+    const url = miniAppUrl(Number(token.split(":")[0]));
+    if (url) {
+        bot.api
+            .setChatMenuButton({
+                menu_button: {
+                    type: "web_app",
+                    text: "Settings",
+                    web_app: { url }
+                }
+            })
+            .catch((err) =>
+                logger.warn(`Could not set menu button: ${err.message}`)
+            );
+    }
+
     bots.set(token, bot);
     bot.use(composer);
     return bot;
 };
+
+/** Only bots that have handled an update in this process. Callers handle a miss. */
+export const getBotById = (botId: number) => {
+    const prefix = `${botId}:`;
+    for (const [token, bot] of bots) {
+        if (token.startsWith(prefix)) return bot;
+    }
+};
+
+/** The bot id is verified against the initData signature, so it is safe in the URL. */
+export const miniAppUrl = (botId: number) =>
+    WEBHOOK_HOST ? `${WEBHOOK_HOST}/app?bot=${botId}` : undefined;
 
 const wrapper =
     (handler: (ctx: BotContext) => Promise<void>) =>
@@ -74,6 +110,8 @@ privateChat.command(["help", "settings"], wrapper(help_handler));
 privateChat.command("set").filter(owner_only, wrapper(set_chat_handler));
 privateChat.command("get").filter(owner_only, wrapper(get_chat_handler));
 privateChat.command("rem").filter(owner_only, wrapper(rem_chat_handler));
+
+privateChat.on("msg:chat_shared").filter(owner_only, wrapper(chat_shared_handler));
 
 privateChat.on("msg:text").filter(
     // @ts-ignore

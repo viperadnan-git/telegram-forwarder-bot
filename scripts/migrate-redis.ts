@@ -1,13 +1,13 @@
 /**
- * One-off backfill of the old Redis key layout into Postgres.
- * Reads Redis, writes Postgres, deletes nothing. Re-runnable.
+ * Backfills the old Redis key layout into Postgres. Re-runnable, and deletes
+ * nothing from Redis.
  *
  * Usage: REDIS_URI=... DATABASE_URL=... bun run scripts/migrate-redis.ts
  */
 
 import "dotenv/config";
 
-import { bots, routes } from "../src/db/schema";
+import { bots, chats, routes } from "../src/db/schema";
 
 import { Redis } from "ioredis";
 import { db } from "../src/db";
@@ -49,7 +49,6 @@ async function main() {
     const ownerKeys = await scanKeys(`${OLD_PREFIX}:*:owner`);
     const chatKeys = await scanKeys(`${OLD_PREFIX}:*:chats`);
 
-    // One pipeline instead of one round-trip per key.
     const ownerValues = await redis
         .pipeline(ownerKeys.map((k) => ["get", k]))
         .exec();
@@ -69,8 +68,6 @@ async function main() {
         .pipeline(chatKeys.map((k) => ["smembers", k]))
         .exec();
 
-    // Flatten to (botId, sourceChatId) pairs, then fetch every destination set
-    // in a second pipeline.
     const pairs: { botId: number; sourceChatId: number }[] = [];
     chatKeys.forEach((key, i) => {
         const botId = Number(key.split(":")[1]);
@@ -103,6 +100,23 @@ async function main() {
         }
     });
 
+    // routes FKs need a chats row first. Redis only had ids, so these get
+    // placeholder names until a refresh.
+    const chatIds = new Set<number>();
+    for (const r of routeRows) {
+        chatIds.add(r.sourceChatId);
+        chatIds.add(r.destChatId);
+    }
+    let chatsInserted = 0;
+    for (const chunk of chunks([...chatIds], CHUNK)) {
+        const inserted = await db
+            .insert(chats)
+            .values(chunk.map((chatId) => ({ chatId })))
+            .onConflictDoNothing()
+            .returning({ chatId: chats.chatId });
+        chatsInserted += inserted.length;
+    }
+
     let botsInserted = 0;
     for (const chunk of chunks([...botRows], CHUNK)) {
         const inserted = await db
@@ -125,7 +139,8 @@ async function main() {
 
     const withOwners = [...botRows.values()].filter(Boolean).length;
     console.log(
-        `bots:   ${botRows.size} seen (${withOwners} with owners), ` +
+        `chats:  ${chatIds.size} seen, ${chatsInserted} inserted (placeholder names)\n` +
+            `bots:   ${botRows.size} seen (${withOwners} with owners), ` +
             `${botsInserted} inserted, ${botRows.size - botsInserted} already present\n` +
             `routes: ${routeRows.length} seen, ${routesInserted} inserted, ` +
             `${routeRows.length - routesInserted} already present\n` +

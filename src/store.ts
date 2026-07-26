@@ -1,16 +1,39 @@
-import { RouteConfig, bots, routes } from "./db/schema";
-import { and, eq } from "drizzle-orm";
+import {
+    RouteConfig,
+    UNKNOWN_USERNAME,
+    UNNAMED_CHAT,
+    bots,
+    chats,
+    routes
+} from "./db/schema";
+import { and, eq, sql } from "drizzle-orm";
+
+import { alias } from "drizzle-orm/pg-core";
 
 import { Cache } from "./cache";
 import { db } from "./db";
 
 export type Route = { destChatId: number; config: RouteConfig };
 
+export type StoredRoute = {
+    id: string;
+    sourceChatId: number;
+    destChatId: number;
+    enabled: boolean;
+    config: RouteConfig;
+    sourceName: string;
+    destName: string;
+};
+
 const routeCache = new Cache<Route[]>("routes");
 const ownerCache = new Cache<number | null>("owner");
 
 const routeKey = (botId: number, sourceChatId: number) =>
     `${botId}:${sourceChatId}`;
+
+// Route ids come from URL paths; a non-uuid would throw on the uuid column.
+const UUID_RE =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 class Store {
     async getOwner(botId: number): Promise<number | undefined> {
@@ -37,8 +60,7 @@ class Store {
     }
 
     async getRoutes(botId: number, sourceChatId: number): Promise<Route[]> {
-        // /get and /rem parse chat ids from user text; NaN would reach a bigint
-        // column and throw, where Redis simply returned nothing.
+        // Chat ids come from user text; NaN would throw on a bigint column.
         if (!Number.isFinite(sourceChatId)) return [];
         return routeCache.get(routeKey(botId, sourceChatId), async () =>
             db
@@ -57,10 +79,17 @@ class Store {
         );
     }
 
+    /** routes FKs require a chats row; the name columns default to placeholders. */
+    private async ensureChats(chatIds: number[]) {
+        await db
+            .insert(chats)
+            .values(chatIds.map((chatId) => ({ chatId })))
+            .onConflictDoNothing();
+    }
+
     async setChatMap(botId: number, sourceChatId: number, destChatId: number) {
-        // A route needs its bot row to exist; /set is owner-only but the owner
-        // may have been set before this table existed.
         await db.insert(bots).values({ botId }).onConflictDoNothing();
+        await this.ensureChats([sourceChatId, destChatId]);
         await db
             .insert(routes)
             .values({ botId, sourceChatId, destChatId })
@@ -84,6 +113,145 @@ class Store {
                 )
             );
         await routeCache.invalidate(routeKey(botId, sourceChatId));
+    }
+
+    // Mini App API. Every method scopes its WHERE by botId, so an untrusted
+    // route id cannot reach another bot's rows.
+
+    private joinedRoutes() {
+        const source = alias(chats, "source_chat");
+        const dest = alias(chats, "dest_chat");
+        return db
+            .select({
+                id: routes.id,
+                sourceChatId: routes.sourceChatId,
+                destChatId: routes.destChatId,
+                enabled: routes.enabled,
+                config: routes.config,
+                sourceName: source.title,
+                destName: dest.title
+            })
+            .from(routes)
+            .innerJoin(source, eq(source.chatId, routes.sourceChatId))
+            .innerJoin(dest, eq(dest.chatId, routes.destChatId))
+            .$dynamic();
+    }
+
+    async listRoutes(botId: number): Promise<StoredRoute[]> {
+        return this.joinedRoutes()
+            .where(eq(routes.botId, botId))
+            .orderBy(routes.sourceChatId, routes.destChatId);
+    }
+
+    private async routeById(
+        botId: number,
+        id: string
+    ): Promise<StoredRoute | undefined> {
+        const [row] = await this.joinedRoutes()
+            .where(and(eq(routes.botId, botId), eq(routes.id, id)))
+            .limit(1);
+        return row;
+    }
+
+    async saveChat(chat: {
+        chatId: number;
+        title?: string | null;
+        username?: string | null;
+        type?: string | null;
+    }) {
+        const values = {
+            chatId: chat.chatId,
+            title: chat.title || UNNAMED_CHAT,
+            username: chat.username || UNKNOWN_USERNAME,
+            type: chat.type ?? null,
+            updatedAt: new Date()
+        };
+        await db
+            .insert(chats)
+            .values(values)
+            .onConflictDoUpdate({ target: chats.chatId, set: values });
+    }
+
+    /** Every chat id this bot's routes point at. */
+    async referencedChatIds(botId: number): Promise<number[]> {
+        const rows = await db
+            .select({
+                sourceChatId: routes.sourceChatId,
+                destChatId: routes.destChatId
+            })
+            .from(routes)
+            .where(eq(routes.botId, botId));
+
+        const ids = new Set<number>();
+        for (const r of rows) {
+            ids.add(r.sourceChatId);
+            ids.add(r.destChatId);
+        }
+        return [...ids];
+    }
+
+    async createRoute(
+        botId: number,
+        sourceChatId: number,
+        destChatId: number
+    ): Promise<StoredRoute | undefined> {
+        await db.insert(bots).values({ botId }).onConflictDoNothing();
+        await this.ensureChats([sourceChatId, destChatId]);
+        const [inserted] = await db
+            .insert(routes)
+            .values({ botId, sourceChatId, destChatId })
+            .onConflictDoNothing()
+            .returning({ id: routes.id });
+        await routeCache.invalidate(routeKey(botId, sourceChatId));
+        return inserted ? this.routeById(botId, inserted.id) : undefined;
+    }
+
+    async updateRoute(
+        botId: number,
+        id: string,
+        patch: { config?: RouteConfig; enabled?: boolean }
+    ): Promise<StoredRoute | undefined> {
+        if (!UUID_RE.test(id)) return undefined;
+        const [row] = await db
+            .update(routes)
+            .set(patch)
+            .where(and(eq(routes.botId, botId), eq(routes.id, id)))
+            .returning({ sourceChatId: routes.sourceChatId });
+        if (!row) return undefined;
+        await routeCache.invalidate(routeKey(botId, row.sourceChatId));
+        return this.routeById(botId, id);
+    }
+
+    async deleteRoute(botId: number, id: string): Promise<boolean> {
+        if (!UUID_RE.test(id)) return false;
+        const [row] = await db
+            .delete(routes)
+            .where(and(eq(routes.botId, botId), eq(routes.id, id)))
+            .returning({ sourceChatId: routes.sourceChatId });
+        if (row) await routeCache.invalidate(routeKey(botId, row.sourceChatId));
+        return row !== undefined;
+    }
+
+    /** Only routes still on the default `{}`; never clobbers a real setting. */
+    async backfillDefaultConfig(
+        botId: number,
+        config: Record<string, unknown>
+    ): Promise<number> {
+        const changed = await db
+            .update(routes)
+            .set({ config })
+            .where(
+                and(
+                    eq(routes.botId, botId),
+                    sql`${routes.config} = '{}'::jsonb`
+                )
+            )
+            .returning({ sourceChatId: routes.sourceChatId });
+
+        for (const source of new Set(changed.map((r) => r.sourceChatId))) {
+            await routeCache.invalidate(routeKey(botId, source));
+        }
+        return changed.length;
     }
 
     async getAllChatMap(botId: number): Promise<Record<string, number[]>> {

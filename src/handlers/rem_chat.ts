@@ -1,20 +1,46 @@
 import { BotContext } from "../bot";
 import db from "../store";
+import { resolveChat } from "../modules/utils";
 
 export default async function rem_chat_handler(ctx: BotContext) {
-    const match = ctx.match as string;
+    const match = (ctx.match as string)?.trim();
     if (!match) {
         await ctx.reply(
-            "Please specify a from chat id and an optional to chat id.\n\nTo remove specific 'to' chat\n<pre>/rem (from chat_id) (to chat_id)</pre>\nTo remove all forwarding for a chat\n<pre>/rem (from chat_id)</pre>"
+            "Send the source chat, and optionally one destination.\n" +
+                "<pre>/rem (source) (destination)</pre>\n" +
+                "To remove every destination for a source:\n" +
+                "<pre>/rem (source)</pre>\n" +
+                "Each can be a chat id, an @username, or a t.me link."
         );
         return;
     }
 
-    const [chatId, toChatId] = match.split(" ", 2).map(Number);
-    await db.remChatMap(ctx.me.id, chatId, toChatId);
+    const [sourceInput, destInput] = match.split(/\s+/, 2);
+
+    const source = await resolveChat(ctx.api, sourceInput);
+    if (!source.ok) {
+        await ctx.reply(
+            `Could not use <code>${sourceInput}</code>: ${source.error}`
+        );
+        return;
+    }
+
+    let destChatId: number | undefined;
+    if (destInput) {
+        const dest = await resolveChat(ctx.api, destInput);
+        if (!dest.ok) {
+            await ctx.reply(
+                `Could not use <code>${destInput}</code>: ${dest.error}`
+            );
+            return;
+        }
+        destChatId = dest.chat.id;
+    }
+
+    await db.remChatMap(ctx.me.id, source.chat.id, destChatId);
     await ctx.reply(
-        `Forwarding is disabled for new messages in chat.\n<pre>${chatId}${
-            toChatId ? " -> " + toChatId : ""
+        `Forwarding stopped.\n<pre>${source.chat.id}${
+            destChatId ? " -> " + destChatId : " (all destinations)"
         }</pre>`
     );
 }

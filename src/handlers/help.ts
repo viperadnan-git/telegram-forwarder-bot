@@ -1,41 +1,62 @@
-import { BotContext } from "../bot";
+import { BotContext, miniAppUrl } from "../bot";
 
 export default async function help_handler(ctx: BotContext) {
-    await ctx.reply(`
-This bot forwards messages from one chat to another.
-<i><b>from_chat_id</b> is the chat id from which you want to forward messages.
-<b>to_chat_id</b> is the chat id to which you want to forward messages.
+    const url = miniAppUrl(ctx.me.id);
 
-You can use username instead of id for channels and supergroups only.</i>
+    await ctx.reply(
+        `
+This bot forwards messages from one chat to another.
+<i><b>source</b> is the chat messages are forwarded from.
+<b>destination</b> is the chat messages are forwarded to.
+
+Each can be a chat id, an @username, or a t.me link.</i>
+
+<b>Per-destination settings</b> — filters, forward mode and caption changes — live in the Settings Mini App, reachable from the menu button below the message box.
 
 <b>Commands:</b>
 <pre>
-/set (from_chat_id) (to_chat_id)
-    Add a chat to the forwarding list.
-/rem (from_chat_id) (to_chat_id)
-    Remove a chat from the forwarding list.
-/get (from_chat_id)
-    Get the forwarding list for a chat.
+/set
+    Pick the source and destination from a list of your chats.
+/set (source) (destination)
+    Add a destination without the picker.
+/rem (source) (destination)
+    Remove a destination from the forwarding list.
+/get (source)
+    Show the destinations for a source chat.
 /get
-    Get the forwarding list for all chats.
+    Show every source chat and its destinations.
 /set_owner (user_id)
     Set the new owner of the bot.
 </pre>
-<i>Example:</i>
+<i>The quickest way is to send /set on its own and pick the chats from the list Telegram shows you. Only chats I am already in appear there.</i>
+
+<i>Example without the picker:</i>
 <pre>/set 123456789 987654321</pre>
-This will forward all messages from chat 123456789 to chat 987654321.
+Forwards every new message from source 123456789 to destination 987654321.
+<pre>/set https://t.me/mychannel @mygroup</pre>
+The same, using a link and a username.
 <pre>/rem 123456789 987654321</pre>
-This will remove forwarding from chat 123456789 to chat 987654321.
+Removes that one destination.
 <pre>/get 123456789</pre>
-This will show all chats that are forwarded from chat 123456789.
+Shows every destination for that source chat.
 <pre>/rem 123456789</pre>
-This will remove all forwarding from chat 123456789.
+Removes every destination for that source chat.
 
-<i>To forward messages from one chat to multiple chats repeat the /set command with different to_chat_id.</i>
+<i>To forward one source to several destinations, repeat /set with a different destination.</i>
 <pre>/set 123456789 987654321</pre>
-<pre>/set 123456789 123456789</pre>
+<pre>/set 123456789 555555555</pre>
 
-<i>The owner can be changed user by /set_owner (user id) command. This will allow the new user to use the bot commands.</i>
+<i>The owner can be changed with /set_owner (user id). This lets the new user run the bot commands.</i>
 
-<b>Source:</b> https://github.com/viperadnan-git/telegram-forwarder-bot`);
+<b>Source:</b> https://github.com/viperadnan-git/telegram-forwarder-bot`,
+        url
+            ? {
+                  reply_markup: {
+                      inline_keyboard: [
+                          [{ text: "Open settings", web_app: { url } }]
+                      ]
+                  }
+              }
+            : undefined
+    );
 }

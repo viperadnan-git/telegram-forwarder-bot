@@ -1,10 +1,13 @@
 import "dotenv/config";
 
-import { Request, Response } from "express";
+import { NextFunction, Request, Response } from "express";
 import { WEBHOOK_HOST, botCreator, bots } from "./bot";
 
+import { createApiRouter } from "./api";
+import { existsSync } from "fs";
 import express from "express";
 import logger from "./modules/logger";
+import path from "path";
 import packageJson from "../package.json";
 import { webhookCallback } from "grammy";
 
@@ -32,6 +35,20 @@ app.get("/ping", (_: Request, res: Response) => {
     res.end("pong");
 });
 
+app.use("/api", createApiRouter());
+
+const webDist = path.join(__dirname, "..", "web", "dist");
+if (existsSync(webDist)) {
+    app.use("/app", express.static(webDist));
+    app.get("/app/*", (_: Request, res: Response) => {
+        res.sendFile(path.join(webDist, "index.html"));
+    });
+} else {
+    logger.warn(
+        `Mini App build not found at ${webDist}. Run "bun run build:web" to enable /app.`
+    );
+}
+
 app.post("/bot:token", async (req: Request, res: Response) => {
     let bot = bots.get(req.params.token);
 
@@ -41,9 +58,22 @@ app.post("/bot:token", async (req: Request, res: Response) => {
 
     try {
         return await webhookCallback(bot, "express")(req, res);
-    } catch (err) {
-        return res.status(200).end();
+    } catch (err: any) {
+        // 200 so Telegram does not retry a poisoned update, but never silently.
+        logger.error(`Update handling failed: ${err?.stack ?? err}`);
+        if (!res.headersSent) return res.status(200).end();
     }
+});
+
+// Last, so it also catches body-parser failures. Express's default handler
+// would render the stack trace into the response.
+app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
+    const status = Number(err?.status) || 500;
+    logger.error(`${req.method} ${req.path} failed: ${err?.message}`);
+    if (res.headersSent) return;
+    res.status(status).json({
+        error: status === 500 ? "internal error" : (err?.message ?? "bad request")
+    });
 });
 
 app.listen(PORT, HOST, async () => {
