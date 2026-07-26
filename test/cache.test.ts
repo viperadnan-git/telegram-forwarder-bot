@@ -89,3 +89,39 @@ describe("Cache", () => {
         expect(reloaded).toBe(true);
     });
 });
+
+describe("invalidation during an in-flight load", () => {
+    test("a loader that started before invalidate does not repopulate", async () => {
+        const cache = new Cache<string>("race1", { ttlMs: 60_000 });
+
+        let release: (v: string) => void = () => {};
+        const slow = () => new Promise<string>((r) => (release = r));
+
+        // Start a load, invalidate mid-flight, then let the load finish.
+        const inflight = cache.get("k", slow);
+        await cache.invalidate("k");
+        release("stale");
+        expect(await inflight).toBe("stale"); // caller still gets its result
+
+        // The next read must hit the loader again, not the stale value.
+        let loads = 0;
+        const fresh = await cache.get("k", async () => {
+            loads++;
+            return "fresh";
+        });
+        expect(fresh).toBe("fresh");
+        expect(loads).toBe(1);
+    });
+
+    test("without an invalidation the result is cached as usual", async () => {
+        const cache = new Cache<string>("race2", { ttlMs: 60_000 });
+        expect(await cache.get("k", async () => "v")).toBe("v");
+
+        let loads = 0;
+        await cache.get("k", async () => {
+            loads++;
+            return "other";
+        });
+        expect(loads).toBe(0);
+    });
+});

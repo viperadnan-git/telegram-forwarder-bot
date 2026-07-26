@@ -1,6 +1,6 @@
 {
-  "id": "c8f98967-dd17-42b1-85cb-de146bc6b690",
-  "prevId": "00000000-0000-0000-0000-000000000000",
+  "id": "cb0f4134-c4f1-46e7-a434-62b8af2a024d",
+  "prevId": "c8f98967-dd17-42b1-85cb-de146bc6b690",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -163,63 +163,63 @@
             }
           ],
           "isUnique": false,
-          "where": "\"routes\".\"enabled\"",
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "where": "\"routes\".\"enabled\"",
+          "concurrently": false
         }
       },
       "foreignKeys": {
         "routes_bot_id_bots_bot_id_fk": {
           "name": "routes_bot_id_bots_bot_id_fk",
           "tableFrom": "routes",
-          "tableTo": "bots",
           "columnsFrom": [
             "bot_id"
           ],
+          "tableTo": "bots",
           "columnsTo": [
             "bot_id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         },
         "routes_source_chat_id_chats_chat_id_fk": {
           "name": "routes_source_chat_id_chats_chat_id_fk",
           "tableFrom": "routes",
-          "tableTo": "chats",
           "columnsFrom": [
             "source_chat_id"
           ],
+          "tableTo": "chats",
           "columnsTo": [
             "chat_id"
           ],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "restrict"
         },
         "routes_dest_chat_id_chats_chat_id_fk": {
           "name": "routes_dest_chat_id_chats_chat_id_fk",
           "tableFrom": "routes",
-          "tableTo": "chats",
           "columnsFrom": [
             "dest_chat_id"
           ],
+          "tableTo": "chats",
           "columnsTo": [
             "chat_id"
           ],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "restrict"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
         "routes_bot_source_dest_key": {
           "name": "routes_bot_source_dest_key",
-          "nullsNotDistinct": false,
           "columns": [
             "bot_id",
             "source_chat_id",
             "dest_chat_id"
-          ]
+          ],
+          "nullsNotDistinct": false
         }
       },
       "policies": {},
@@ -229,10 +229,10 @@
   },
   "enums": {},
   "schemas": {},
+  "views": {},
   "sequences": {},
   "roles": {},
   "policies": {},
-  "views": {},
   "_meta": {
     "columns": {},
     "schemas": {},

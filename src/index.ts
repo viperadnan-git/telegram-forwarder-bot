@@ -15,12 +15,13 @@ import logger from "./modules/logger";
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
+// Parenthesised: `a || b ? x : y` parses as `(a || b) ? x : y`, which made
+// any HOST value force "0.0.0.0".
 const HOST =
-    process.env.HOST || process.env.NODE_ENV === "production"
-        ? "0.0.0.0"
-        : "localhost";
+    process.env.HOST ||
+    (process.env.NODE_ENV === "production" ? "0.0.0.0" : "localhost");
 
-app.use(express.json());
+app.use(express.json({ limit: "256kb" }));
 app.use((req: Request, _: Response, next: NextFunction) => {
     logger.debug(`${req.method} ${req.path}`);
     next();

@@ -1,5 +1,5 @@
 import type { BotContext } from "../bot";
-import { formatObject, resolveChat } from "../modules/utils";
+import { escapeHtml, formatObject, resolveChat } from "../modules/utils";
 import db from "../store";
 
 export default async function get_chat_handler(ctx: BotContext) {
@@ -19,7 +19,9 @@ export default async function get_chat_handler(ctx: BotContext) {
 
     const source = await resolveChat(ctx.api, match);
     if (!source.ok) {
-        await ctx.reply(`Could not use <code>${match}</code>: ${source.error}`);
+        await ctx.reply(
+            `Could not use <code>${escapeHtml(match)}</code>: ${source.error}`
+        );
         return;
     }
 

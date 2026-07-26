@@ -57,6 +57,12 @@ export const ruleSchema = z.discriminatedUnion("type", [
     senderRule
 ]);
 
+const emptyToUndefined = z
+    .string()
+    .max(1024)
+    .optional()
+    .transform((v) => (v === "" ? undefined : v));
+
 const replaceSchema = z.object({
     pattern: z.string().min(1).max(512),
     replacement: z.string().max(1024).default(""),
@@ -78,14 +84,18 @@ export const routeConfigSchema = z.object({
     caption: z
         .object({
             strip: z.boolean().default(false),
-            prepend: z.string().max(1024).optional(),
-            append: z.string().max(1024).optional(),
+            // "" is what an emptied input sends; treat it as absent so the
+            // client's truthiness check and hasCaptionTransform agree.
+            prepend: emptyToUndefined,
+            append: emptyToUndefined,
             replace: z.array(replaceSchema).default([]),
             removeLinks: z.boolean().default(false),
             removeMentions: z.boolean().default(false)
         })
         .default({
             strip: false,
+            prepend: undefined,
+            append: undefined,
             replace: [],
             removeLinks: false,
             removeMentions: false
@@ -129,6 +139,24 @@ export function validateConfig(raw: unknown): ValidationResult {
         };
     }
     const config = parsed.data;
+
+    const emptySender = [
+        ...config.filters.whitelist,
+        ...config.filters.blacklist
+    ].some(
+        (r) =>
+            r.type === "sender" &&
+            r.ids.length === 0 &&
+            r.usernames.length === 0
+    );
+    if (emptySender) {
+        return {
+            ok: false,
+            error:
+                "A sender rule needs at least one user id or @username. " +
+                "An empty one matches nothing, which would block everything."
+        };
+    }
 
     if (config.mode === "forward" && modifiesContent(config)) {
         return {

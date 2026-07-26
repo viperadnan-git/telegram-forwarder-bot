@@ -81,10 +81,7 @@ export function matches(rule: Rule, msg: Message): boolean {
     }
 }
 
-/**
- * Forward when the whitelist is empty or something matches it, and nothing
- * matches the blacklist. Deny wins, and an empty config forwards everything.
- */
+/** Deny wins; an empty config forwards everything. */
 export function passes(config: RouteConfig, msg: Message): boolean {
     const { whitelist, blacklist } = config.filters;
 

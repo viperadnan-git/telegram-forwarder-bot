@@ -18,6 +18,13 @@ export const formatObject = (obj: {
         })
         .join("");
 
+/**
+ * parseMode is HTML for every reply, so anything a user or a chat title
+ * supplies has to be escaped or Telegram rejects the whole message.
+ */
+export const escapeHtml = (text: string): string =>
+    text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
 export type ResolveResult =
     | { ok: true; chat: ChatFullInfo }
     | { ok: false; error: string };
