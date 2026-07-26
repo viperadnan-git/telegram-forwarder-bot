@@ -1,7 +1,12 @@
 {
     "compilerOptions": {
-        "target": "es2016",
-        "module": "commonjs",
+        "target": "es2022",
+        // Bun bundles; tsc only type-checks. "preserve"/"bundler" is what lets
+        // it resolve bun:* modules and modern package exports.
+        "module": "preserve",
+        "moduleResolution": "bundler",
+        // Explicit: TS 7 no longer picks up bun:* declarations otherwise.
+        "types": ["bun", "node"],
         "resolveJsonModule": true,
         "esModuleInterop": true,
         "forceConsistentCasingInFileNames": true,

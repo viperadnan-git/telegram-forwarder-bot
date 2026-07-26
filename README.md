@@ -136,6 +136,16 @@ equivalent settings are written onto routes still using defaults. Routes you
 have already configured are untouched, and the characters can be dropped from
 the name afterwards.
 
+## Pinned dependencies
+
+Two packages are deliberately held back:
+
+- **`@grammyjs/parse-mode` v1** — v2 dropped `parseMode`/`ParseModeFlavor` and
+  became a formatting-string library. The bot sets HTML parse mode globally via
+  the v1 transformer.
+- **`typescript` v6 in `web/`** — `svelte-check` crashes on v7
+  (`typescript.default.sys` is undefined). The server is on v7.
+
 ## Contributing
 
 Pull requests welcome. Open an issue first for anything substantial.

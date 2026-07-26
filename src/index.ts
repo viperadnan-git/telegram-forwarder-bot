@@ -9,7 +9,7 @@ import express, {
 } from "express";
 import { webhookCallback } from "grammy";
 import packageJson from "../package.json";
-import { createApiRouter } from "./api";
+import { createApiRouter, param } from "./api";
 import { botCreator, bots, WEBHOOK_HOST } from "./bot";
 import logger from "./modules/logger";
 
@@ -43,7 +43,7 @@ app.use("/api", createApiRouter());
 const webDist = path.join(__dirname, "..", "web", "dist");
 if (existsSync(webDist)) {
     app.use("/app", express.static(webDist));
-    app.get("/app/*", (_: Request, res: Response) => {
+    app.get("/app/*splat", (_: Request, res: Response) => {
         res.sendFile(path.join(webDist, "index.html"));
     });
 } else {
@@ -53,10 +53,11 @@ if (existsSync(webDist)) {
 }
 
 app.post("/bot:token", async (req: Request, res: Response) => {
-    let bot = bots.get(req.params.token);
+    const token = param(req.params.token);
+    let bot = bots.get(token);
 
     if (!bot) {
-        bot = await botCreator(req.params.token);
+        bot = await botCreator(token);
     }
 
     try {
