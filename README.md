@@ -37,8 +37,38 @@ For example, if your bot is named `MyForwarder~`, all forwarded messages will ha
 Configurations are added in environment variables or [`.env.sample`](./.env.sample) file and rename it to `.env`. The following environment variables are required to run the bot.
 
 -   `BOT_TOKEN` - Telegram bot token received from [BotFather](https://t.me/BotFather)
--   `REDIS_URI` - Redis database URI to store the channel ids. You can use [Redis Labs](https://redislabs.com/) to get a free Redis database
+-   `DATABASE_URL` - PostgreSQL connection string. This is the source of truth
 -   `WEBHOOK_HOST` - URL of the server where the bot is running
+
+Optional:
+
+-   `REDIS_URI` - Enables a shared cache layer. Only needed for multi-instance or serverless deployments. On a single long-running container the in-process cache is already faster, and leaving this unset is the right choice
+-   `CACHE_TTL_SECONDS` - Cache entry lifetime, default `60`
+-   `CACHE_MAX_ENTRIES` - In-process cache size cap, default `10000`
+-   `DIRECT_DATABASE_URL` - Non-pooled connection string, used for migrations only. Set this when `DATABASE_URL` points at a transaction pooler
+-   `DATABASE_POOL_MAX` - Client-side connection pool size, default `10`
+
+### Database setup
+
+Apply migrations before starting the bot. This uses the `drizzle-kit` CLI, which
+is a dev dependency, so run it from a checkout with dev dependencies installed —
+not from inside the production image:
+
+```sh
+bun install
+bun run db:migrate
+```
+
+After changing `src/db/schema.ts`, regenerate the migration SQL with
+`bun run db:generate`, then apply it. `bun run db:studio` opens a browser UI over
+the database.
+
+If you are upgrading from a Redis-backed version, backfill your existing data
+once (this reads Redis and writes Postgres, and deletes nothing):
+
+```sh
+REDIS_URI=<old-redis-uri> bun run migrate:redis
+```
 
 ## Deploying
 

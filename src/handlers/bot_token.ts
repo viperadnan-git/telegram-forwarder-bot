@@ -1,7 +1,7 @@
 import { BotContext, WEBHOOK_HOST, botCreator, bots } from "../bot";
 
 import { MessageEntity } from "grammy/types";
-import db from "../database";
+import db from "../store";
 import logger from "../modules/logger";
 
 function extractBotToken(msgText: string, entities: Array<MessageEntity>) {
