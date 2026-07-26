@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
     bigint,
     boolean,
@@ -9,8 +10,6 @@ import {
     unique,
     uuid
 } from "drizzle-orm/pg-core";
-
-import { sql } from "drizzle-orm";
 import { v7 as uuidv7 } from "uuid";
 
 /** Per-destination options; shape lives in config.ts. */

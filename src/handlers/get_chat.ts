@@ -1,7 +1,6 @@
-import { BotContext } from "../bot";
+import type { BotContext } from "../bot";
+import { formatObject, resolveChat } from "../modules/utils";
 import db from "../store";
-import { formatObject } from "../modules/utils";
-import { resolveChat } from "../modules/utils";
 
 export default async function get_chat_handler(ctx: BotContext) {
     const match = (ctx.match as string)?.trim();

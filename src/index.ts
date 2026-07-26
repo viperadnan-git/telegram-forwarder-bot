@@ -1,15 +1,17 @@
 import "dotenv/config";
 
-import { NextFunction, Request, Response } from "express";
-import { WEBHOOK_HOST, botCreator, bots } from "./bot";
-
-import { createApiRouter } from "./api";
-import { existsSync } from "fs";
-import express from "express";
-import logger from "./modules/logger";
-import path from "path";
-import packageJson from "../package.json";
+import { existsSync } from "node:fs";
+import path from "node:path";
+import express, {
+    type NextFunction,
+    type Request,
+    type Response
+} from "express";
 import { webhookCallback } from "grammy";
+import packageJson from "../package.json";
+import { createApiRouter } from "./api";
+import { botCreator, bots, WEBHOOK_HOST } from "./bot";
+import logger from "./modules/logger";
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
@@ -19,7 +21,7 @@ const HOST =
         : "localhost";
 
 app.use(express.json());
-app.use((req: Request, _: Response, next: Function) => {
+app.use((req: Request, _: Response, next: NextFunction) => {
     logger.debug(`${req.method} ${req.path}`);
     next();
 });
@@ -72,7 +74,8 @@ app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
     logger.error(`${req.method} ${req.path} failed: ${err?.message}`);
     if (res.headersSent) return;
     res.status(status).json({
-        error: status === 500 ? "internal error" : (err?.message ?? "bad request")
+        error:
+            status === 500 ? "internal error" : (err?.message ?? "bad request")
     });
 });
 
@@ -89,7 +92,7 @@ app.listen(PORT, HOST, async () => {
             const bot = botCreator(process.env.BOT_TOKEN);
             try {
                 await bot.api.setWebhook(
-                    WEBHOOK_HOST + "/bot" + process.env.BOT_TOKEN,
+                    `${WEBHOOK_HOST}/bot${process.env.BOT_TOKEN}`,
                     {
                         drop_pending_updates: true
                     }

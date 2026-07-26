@@ -5,7 +5,9 @@ type WebApp = {
     expand(): void;
     close(): void;
     openTelegramLink?(url: string): void;
-    HapticFeedback?: { notificationOccurred(t: "error" | "success" | "warning"): void };
+    HapticFeedback?: {
+        notificationOccurred(t: "error" | "success" | "warning"): void;
+    };
     showConfirm?(message: string, cb: (ok: boolean) => void): void;
 };
 
@@ -62,6 +64,7 @@ export const haptic = (type: "success" | "warning" | "error" = "success") =>
     webApp?.HapticFeedback?.notificationOccurred(type);
 
 export function confirm(message: string): Promise<boolean> {
-    if (!webApp?.showConfirm) return Promise.resolve(globalThis.confirm(message));
-    return new Promise((resolve) => webApp.showConfirm!(message, resolve));
+    if (!webApp?.showConfirm)
+        return Promise.resolve(globalThis.confirm(message));
+    return new Promise((resolve) => webApp.showConfirm?.(message, resolve));
 }

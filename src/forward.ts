@@ -1,11 +1,16 @@
-import { RouteConfig, hasCaptionTransform, parseConfig } from "./config";
-import { TextAndEntities, applyCaption, clamp } from "./transforms";
-
 import type { Api } from "grammy";
-import type { InputMediaAudio, InputMediaDocument, InputMediaPhoto, InputMediaVideo, Message } from "grammy/types";
-import type { Route } from "./store";
-import logger from "./modules/logger";
+import type {
+    InputMediaAudio,
+    InputMediaDocument,
+    InputMediaPhoto,
+    InputMediaVideo,
+    Message
+} from "grammy/types";
+import { hasCaptionTransform, parseConfig, type RouteConfig } from "./config";
 import { passes } from "./filters";
+import logger from "./modules/logger";
+import type { Route } from "./store";
+import { applyCaption, clamp, type TextAndEntities } from "./transforms";
 
 const TEXT_LIMIT = 4096;
 const CAPTION_LIMIT = 1024;
@@ -19,7 +24,7 @@ const contentOf = (msg: Message): TextAndEntities => ({
 
 /** The captioned part decides filtering for the whole album. */
 const primaryOf = (parts: Message[]) =>
-    parts.find((p) => (p.caption ?? p.text)) ?? parts[0];
+    parts.find((p) => p.caption ?? p.text) ?? parts[0];
 
 type GroupMedia =
     | InputMediaPhoto
@@ -32,14 +37,23 @@ function toInputMedia(
     caption: TextAndEntities | undefined
 ): GroupMedia | undefined {
     const shared = caption
-        ? { caption: caption.text || undefined, caption_entities: caption.entities }
+        ? {
+              caption: caption.text || undefined,
+              caption_entities: caption.entities
+          }
         : {};
 
     if (msg.photo?.length) {
-        return { type: "photo", media: msg.photo[msg.photo.length - 1].file_id, ...shared };
+        return {
+            type: "photo",
+            media: msg.photo[msg.photo.length - 1].file_id,
+            ...shared
+        };
     }
-    if (msg.video) return { type: "video", media: msg.video.file_id, ...shared };
-    if (msg.audio) return { type: "audio", media: msg.audio.file_id, ...shared };
+    if (msg.video)
+        return { type: "video", media: msg.video.file_id, ...shared };
+    if (msg.audio)
+        return { type: "audio", media: msg.audio.file_id, ...shared };
     if (msg.document) {
         return { type: "document", media: msg.document.file_id, ...shared };
     }
@@ -67,7 +81,12 @@ async function deliverSingle(
     };
 
     if (config.mode === "forward") {
-        await api.forwardMessage(destChatId, sourceChatId, msg.message_id, common);
+        await api.forwardMessage(
+            destChatId,
+            sourceChatId,
+            msg.message_id,
+            common
+        );
         return;
     }
 
@@ -145,7 +164,9 @@ async function deliverAlbum(
 
     if (media.some((m) => m === undefined)) {
         // ponytail: loses grouping, keeps config.
-        logger.debug("Album has unsupported media, falling back to per-message");
+        logger.debug(
+            "Album has unsupported media, falling back to per-message"
+        );
         for (const part of parts) {
             await deliverSingle(api, config, destChatId, sourceChatId, part);
         }
@@ -168,7 +189,13 @@ export async function deliver(
     if (parts.length > 1) {
         await deliverAlbum(api, config, route.destChatId, sourceChatId, parts);
     } else {
-        await deliverSingle(api, config, route.destChatId, sourceChatId, parts[0]);
+        await deliverSingle(
+            api,
+            config,
+            route.destChatId,
+            sourceChatId,
+            parts[0]
+        );
     }
 }
 

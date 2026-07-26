@@ -1,4 +1,4 @@
-import { BotContext, miniAppUrl } from "../bot";
+import { type BotContext, miniAppUrl } from "../bot";
 
 export default async function help_handler(ctx: BotContext) {
     const url = miniAppUrl(ctx.me.id);

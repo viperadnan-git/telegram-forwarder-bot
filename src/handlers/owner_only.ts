@@ -1,4 +1,4 @@
-import { BotContext } from "../bot";
+import type { BotContext } from "../bot";
 import db from "../store";
 
 export default async function owner_only(ctx: BotContext) {

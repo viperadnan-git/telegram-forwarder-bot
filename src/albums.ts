@@ -10,8 +10,7 @@ import type { Message } from "grammy/types";
 
 export const TELEGRAM_ALBUM_MAX = 10;
 
-export const isAlbumPart = (msg: Message) =>
-    msg.media_group_id !== undefined;
+export const isAlbumPart = (msg: Message) => msg.media_group_id !== undefined;
 
 type Pending<C> = {
     parts: Message[];

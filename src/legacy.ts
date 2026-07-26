@@ -1,5 +1,5 @@
-import db from "./store";
 import logger from "./modules/logger";
+import db from "./store";
 
 /**
  * '~' and '|' in a bot's display name used to set protected content and caption
@@ -37,5 +37,7 @@ export function backfillBotNameFlags(botId: number, botName: string) {
                 );
             }
         })
-        .catch((err) => logger.warn(`Bot-name backfill failed: ${err.message}`));
+        .catch((err) =>
+            logger.warn(`Bot-name backfill failed: ${err.message}`)
+        );
 }

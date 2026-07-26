@@ -1,0 +1,6 @@
+* text=auto eol=lf
+
+# Binary
+bun.lockb binary
+*.png binary
+*.svg text eol=lf

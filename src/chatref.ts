@@ -19,7 +19,8 @@ const toChannelId = (internal: string) => Number(`-100${internal}`);
 
 export function parseChatRef(raw: string): ParseResult {
     const input = raw.trim();
-    if (!input) return { ok: false, error: "Enter a chat id, @username or t.me link" };
+    if (!input)
+        return { ok: false, error: "Enter a chat id, @username or t.me link" };
 
     if (/^-?\d+$/.test(input)) {
         const id = Number(input);
@@ -82,7 +83,8 @@ function parseLink(input: string): ParseResult {
 
     // t.me/s/<username>
     const name = parts[0].toLowerCase() === "s" ? parts[1] : parts[0];
-    if (!name) return { ok: false, error: "That link does not point to a chat" };
+    if (!name)
+        return { ok: false, error: "That link does not point to a chat" };
 
     return USERNAME.test(name)
         ? { ok: true, ref: { kind: "username", username: name } }

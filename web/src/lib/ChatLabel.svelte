@@ -1,10 +1,10 @@
 <script lang="ts">
-    // The -100 prefix is on every channel id, so it is muted.
-    let { id, name }: { id: number; name?: string } = $props();
+// The -100 prefix is on every channel id, so it is muted.
+let { id, name }: { id: number; name?: string } = $props();
 
-    const text = $derived(String(id));
-    const prefix = $derived(text.startsWith("-100") ? "-100" : "");
-    const body = $derived(prefix ? text.slice(4) : text);
+const text = $derived(String(id));
+const prefix = $derived(text.startsWith("-100") ? "-100" : "");
+const body = $derived(prefix ? text.slice(4) : text);
 </script>
 
 {#if name}

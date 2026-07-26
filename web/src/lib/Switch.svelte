@@ -1,9 +1,9 @@
 <script lang="ts">
-    let {
-        checked = $bindable(false),
-        label,
-        sub
-    }: { checked?: boolean; label: string; sub?: string } = $props();
+let {
+    checked = $bindable(false),
+    label,
+    sub
+}: { checked?: boolean; label: string; sub?: string } = $props();
 </script>
 
 <!-- Whole row is the control: a full-height tap target, one focusable element. -->

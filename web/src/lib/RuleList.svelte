@@ -1,52 +1,51 @@
 <script lang="ts">
-    import { MEDIA_KINDS, type Rule } from "./types";
+import Check from "./Check.svelte";
+import { MEDIA_KINDS, type Rule } from "./types";
 
-    import Check from "./Check.svelte";
+let {
+    rules = $bindable([]),
+    title,
+    note
+}: { rules: Rule[]; title: string; note: string } = $props();
 
-    let {
-        rules = $bindable([]),
-        title,
-        note
-    }: { rules: Rule[]; title: string; note: string } = $props();
+const TYPES: Rule["type"][] = ["keyword", "regex", "media", "sender"];
 
-    const TYPES: Rule["type"][] = ["keyword", "regex", "media", "sender"];
+const LABELS: Record<Rule["type"], string> = {
+    keyword: "Keyword",
+    regex: "Regex",
+    media: "Media type",
+    sender: "Sender"
+};
 
-    const LABELS: Record<Rule["type"], string> = {
-        keyword: "Keyword",
-        regex: "Regex",
-        media: "Media type",
-        sender: "Sender"
+function add(type: Rule["type"]) {
+    const blank: Record<Rule["type"], Rule> = {
+        keyword: { type: "keyword", value: "", caseSensitive: false },
+        regex: { type: "regex", pattern: "" },
+        media: { type: "media", kinds: ["photo"] },
+        sender: { type: "sender", ids: [], usernames: [] }
     };
+    rules = [...rules, blank[type]];
+}
 
-    function add(type: Rule["type"]) {
-        const blank: Record<Rule["type"], Rule> = {
-            keyword: { type: "keyword", value: "", caseSensitive: false },
-            regex: { type: "regex", pattern: "" },
-            media: { type: "media", kinds: ["photo"] },
-            sender: { type: "sender", ids: [], usernames: [] }
-        };
-        rules = [...rules, blank[type]];
-    }
+const remove = (i: number) => (rules = rules.filter((_, n) => n !== i));
 
-    const remove = (i: number) => (rules = rules.filter((_, n) => n !== i));
+const senderText = (rule: Extract<Rule, { type: "sender" }>) =>
+    [...rule.ids.map(String), ...rule.usernames].join(", ");
 
-    const senderText = (rule: Extract<Rule, { type: "sender" }>) =>
-        [...rule.ids.map(String), ...rule.usernames].join(", ");
+function setSender(rule: Extract<Rule, { type: "sender" }>, raw: string) {
+    const parts = raw
+        .split(",")
+        .map((p) => p.trim())
+        .filter(Boolean);
+    rule.ids = parts.filter((p) => /^-?\d+$/.test(p)).map(Number);
+    rule.usernames = parts.filter((p) => !/^-?\d+$/.test(p));
+}
 
-    function setSender(rule: Extract<Rule, { type: "sender" }>, raw: string) {
-        const parts = raw
-            .split(",")
-            .map((p) => p.trim())
-            .filter(Boolean);
-        rule.ids = parts.filter((p) => /^-?\d+$/.test(p)).map(Number);
-        rule.usernames = parts.filter((p) => !/^-?\d+$/.test(p));
-    }
-
-    function toggleKind(rule: Extract<Rule, { type: "media" }>, kind: string) {
-        rule.kinds = rule.kinds.includes(kind as any)
-            ? rule.kinds.filter((k) => k !== kind)
-            : [...rule.kinds, kind as any];
-    }
+function toggleKind(rule: Extract<Rule, { type: "media" }>, kind: string) {
+    rule.kinds = rule.kinds.includes(kind as any)
+        ? rule.kinds.filter((k) => k !== kind)
+        : [...rule.kinds, kind as any];
+}
 </script>
 
 <h2 class="section-title">{title}</h2>

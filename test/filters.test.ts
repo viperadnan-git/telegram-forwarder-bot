@@ -1,9 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import { matches, mediaKind, passes } from "../src/filters";
-
 import type { Message } from "grammy/types";
 import type { Rule } from "../src/config";
 import { parseConfig } from "../src/config";
+import { matches, mediaKind, passes } from "../src/filters";
 
 const msg = (over: Partial<Message> = {}) =>
     ({
@@ -16,9 +15,12 @@ const msg = (over: Partial<Message> = {}) =>
 const cfg = (filters: unknown) => parseConfig({ filters });
 
 describe("mediaKind", () => {
-    test("plain text", () => expect(mediaKind(msg({ text: "hi" }))).toBe("text"));
+    test("plain text", () =>
+        expect(mediaKind(msg({ text: "hi" }))).toBe("text"));
     test("photo", () =>
-        expect(mediaKind(msg({ photo: [] as any, caption: "c" }))).toBe("photo"));
+        expect(mediaKind(msg({ photo: [] as any, caption: "c" }))).toBe(
+            "photo"
+        ));
     test("document", () =>
         expect(mediaKind(msg({ document: {} as any }))).toBe("document"));
 });
@@ -61,33 +63,43 @@ describe("passes", () => {
 
     test("matches against caption as well as text", () => {
         const c = cfg({ blacklist: [{ type: "keyword", value: "ad" }] });
-        expect(passes(c, msg({ photo: [] as any, caption: "an ad" }))).toBe(false);
+        expect(passes(c, msg({ photo: [] as any, caption: "an ad" }))).toBe(
+            false
+        );
     });
 });
 
 describe("rule types", () => {
     test("keyword is case insensitive by default", () => {
         expect(
-            matches({ type: "keyword", value: "HELLO", caseSensitive: false },
-                msg({ text: "hello there" }))
+            matches(
+                { type: "keyword", value: "HELLO", caseSensitive: false },
+                msg({ text: "hello there" })
+            )
         ).toBe(true);
     });
 
     test("keyword honors caseSensitive", () => {
         expect(
-            matches({ type: "keyword", value: "HELLO", caseSensitive: true },
-                msg({ text: "hello there" }))
+            matches(
+                { type: "keyword", value: "HELLO", caseSensitive: true },
+                msg({ text: "hello there" })
+            )
         ).toBe(false);
     });
 
     test("regex matches", () => {
         expect(
-            matches({ type: "regex", pattern: "t\\.me/\\w+" },
-                msg({ text: "join t.me/channel" }))
+            matches(
+                { type: "regex", pattern: "t\\.me/\\w+" },
+                msg({ text: "join t.me/channel" })
+            )
         ).toBe(true);
         expect(
-            matches({ type: "regex", pattern: "^\\d+$" },
-                msg({ text: "not a number" }))
+            matches(
+                { type: "regex", pattern: "^\\d+$" },
+                msg({ text: "not a number" })
+            )
         ).toBe(false);
     });
 
@@ -95,7 +107,7 @@ describe("rule types", () => {
         const started = performance.now();
         matches(
             { type: "regex", pattern: "(a+)+$" },
-            msg({ text: "a".repeat(50) + "!" })
+            msg({ text: `${"a".repeat(50)}!` })
         );
         expect(performance.now() - started).toBeLessThan(500);
     });
@@ -122,15 +134,18 @@ describe("rule types", () => {
     test("sender matches forward origin", () => {
         const rule: Rule = { type: "sender", ids: [999], usernames: [] };
         expect(
-            matches(rule, msg({
-                text: "x",
-                forward_origin: {
-                    type: "channel",
-                    chat: { id: 999, type: "channel", title: "orig" },
-                    message_id: 1,
-                    date: 0
-                } as any
-            }))
+            matches(
+                rule,
+                msg({
+                    text: "x",
+                    forward_origin: {
+                        type: "channel",
+                        chat: { id: 999, type: "channel", title: "orig" },
+                        message_id: 1,
+                        date: 0
+                    } as any
+                })
+            )
         ).toBe(true);
     });
 });

@@ -1,18 +1,17 @@
-import { Bot, Composer, Context } from "grammy";
-import { ParseModeFlavor, parseMode } from "@grammyjs/parse-mode";
-
 import { autoRetry } from "@grammyjs/auto-retry";
+import { type ParseModeFlavor, parseMode } from "@grammyjs/parse-mode";
+import { Bot, Composer, type Context } from "grammy";
 import bot_token_handler from "./handlers/bot_token";
-import chat_shared_handler from "./handlers/pick";
-import logger from "./modules/logger";
 import get_chat_handler from "./handlers/get_chat";
 import help_handler from "./handlers/help";
 import message_handler from "./handlers/message";
 import owner_only from "./handlers/owner_only";
+import chat_shared_handler from "./handlers/pick";
 import rem_chat_handler from "./handlers/rem_chat";
 import set_chat_handler from "./handlers/set_chat";
 import set_owner_handler from "./handlers/set_owner";
 import start_handler from "./handlers/start";
+import logger from "./modules/logger";
 
 export type BotContext = ParseModeFlavor<Context>;
 
@@ -30,35 +29,37 @@ export const botCreator = (token: string) => {
     bot.api.config.use(parseMode("HTML"));
     // Fan-out multiplies outgoing calls; honor retry_after on 429s.
     bot.api.config.use(autoRetry({ maxRetryAttempts: 3, maxDelaySeconds: 30 }));
-    bot.api.setMyCommands([
-        {
-            command: "start",
-            description: "Start the bot"
-        },
-        {
-            command: "help",
-            description: "Show help message"
-        },
-        {
-            command: "set",
-            description: "Add forwarding — pick chats from a list"
-        },
-        {
-            command: "get",
-            description: "Get a existing setting"
-        },
-        {
-            command: "rem",
-            description: "Remove a chat forwarding"
-        },
-        {
-            command: "set_owner",
-            description: "Set the owner of the bot"
-        }
-        // A revoked token rejects here; unhandled it kills the process.
-    ]).catch((err) =>
-        logger.warn(`Could not set commands for bot: ${err.message}`)
-    );
+    bot.api
+        .setMyCommands([
+            {
+                command: "start",
+                description: "Start the bot"
+            },
+            {
+                command: "help",
+                description: "Show help message"
+            },
+            {
+                command: "set",
+                description: "Add forwarding — pick chats from a list"
+            },
+            {
+                command: "get",
+                description: "Get a existing setting"
+            },
+            {
+                command: "rem",
+                description: "Remove a chat forwarding"
+            },
+            {
+                command: "set_owner",
+                description: "Set the owner of the bot"
+            }
+            // A revoked token rejects here; unhandled it kills the process.
+        ])
+        .catch((err) =>
+            logger.warn(`Could not set commands for bot: ${err.message}`)
+        );
 
     const url = miniAppUrl(Number(token.split(":")[0]));
     if (url) {
@@ -111,10 +112,12 @@ privateChat.command("set").filter(owner_only, wrapper(set_chat_handler));
 privateChat.command("get").filter(owner_only, wrapper(get_chat_handler));
 privateChat.command("rem").filter(owner_only, wrapper(rem_chat_handler));
 
-privateChat.on("msg:chat_shared").filter(owner_only, wrapper(chat_shared_handler));
+privateChat
+    .on("msg:chat_shared")
+    .filter(owner_only, wrapper(chat_shared_handler));
 
 privateChat.on("msg:text").filter(
-    // @ts-ignore
+    // @ts-expect-error
     (ctx) => ctx.msg.forward_from?.username?.toLowerCase() === "botfather",
     wrapper(bot_token_handler)
 );

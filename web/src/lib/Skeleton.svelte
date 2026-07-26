@@ -1,6 +1,6 @@
 <script lang="ts">
-    // Mirrors a real card's shape so nothing shifts when data lands.
-    const bays = [2, 1];
+// Mirrors a real card's shape so nothing shifts when data lands.
+const bays = [2, 1];
 </script>
 
 {#each bays as destinations, b}

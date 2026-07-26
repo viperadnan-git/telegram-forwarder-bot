@@ -6,8 +6,14 @@
     --subtitle: var(--tg-theme-subtitle-text-color, #8a8a8e);
     --hint: var(--tg-theme-hint-color, #8a8a8e);
     --section-header: var(--tg-theme-section-header-text-color, #6d6d72);
-    --separator: var(--tg-theme-section-separator-color, rgba(120, 120, 128, 0.24));
-    --accent: var(--tg-theme-accent-text-color, var(--tg-theme-link-color, #007aff));
+    --separator: var(
+        --tg-theme-section-separator-color,
+        rgba(120, 120, 128, 0.24)
+    );
+    --accent: var(
+        --tg-theme-accent-text-color,
+        var(--tg-theme-link-color, #007aff)
+    );
     --button: var(--tg-theme-button-color, #007aff);
     --button-text: var(--tg-theme-button-text-color, #fff);
     --destructive: var(--tg-theme-destructive-text-color, #ff3b30);
@@ -17,10 +23,17 @@
     --fill: color-mix(in srgb, var(--hint) 12%, transparent);
     --fill-strong: color-mix(in srgb, var(--hint) 20%, transparent);
 
-    --safe-bottom: var(--tg-content-safe-area-inset-bottom, env(safe-area-inset-bottom, 0px));
-    --safe-top: var(--tg-content-safe-area-inset-top, env(safe-area-inset-top, 0px));
+    --safe-bottom: var(
+        --tg-content-safe-area-inset-bottom,
+        env(safe-area-inset-bottom, 0px)
+    );
+    --safe-top: var(
+        --tg-content-safe-area-inset-top,
+        env(safe-area-inset-top, 0px)
+    );
 
-    --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto,
+    --sans:
+        -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto,
         system-ui, sans-serif;
     --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
 
@@ -30,7 +43,7 @@
     --gutter: 16px;
 
     color-scheme: light dark;
-    font: 17px/1.35 var(--sans);
+    font: 17px / 1.35 var(--sans);
     -webkit-font-smoothing: antialiased;
 }
 
@@ -256,12 +269,6 @@ button {
     min-width: 0;
 }
 
-/* Paused routes stay listed, but must not read as live. */
-.drop.paused .chat-name,
-.drop.paused .cid {
-    opacity: 0.45;
-}
-
 /* --- chat ids ----------------------------------------------------------- */
 
 .cid {
@@ -279,7 +286,6 @@ button {
     opacity: 0.65;
 }
 
-
 .chat-name {
     font-size: 16px;
     font-weight: 500;
@@ -293,6 +299,11 @@ button {
     font-size: 12px;
     color: var(--subtitle);
     margin-top: 1px;
+}
+/* Paused routes stay listed, but must not read as live. */
+.drop.paused .chat-name,
+.drop.paused .cid {
+    opacity: 0.45;
 }
 
 .sub {
@@ -358,6 +369,10 @@ button.chip {
     text-align: left;
 }
 
+.field {
+    padding: 12px var(--gutter);
+}
+
 .row + .row,
 .row + .field,
 .field + .field,
@@ -396,10 +411,6 @@ button.chip {
 }
 
 /* --- form controls ------------------------------------------------------ */
-
-.field {
-    padding: 12px var(--gutter);
-}
 
 .field > label,
 .field-label {
@@ -451,7 +462,6 @@ button.chip {
 .input + .input {
     margin-top: 8px;
 }
-
 
 /* The native checkbox never matches Telegram's chrome. */
 .check {
@@ -846,6 +856,8 @@ button.chip {
     overflow-wrap: anywhere;
 }
 
+/* biome-ignore lint/style/noDescendingSpecificity: .icon-btn.busy svg is a
+   different component; these never match the same element. */
 .id-copy svg {
     flex: none;
     opacity: 0.55;
@@ -883,7 +895,7 @@ button.chip {
     *,
     *::before,
     *::after {
-        animation-duration: 0.01ms !important;
-        transition-duration: 0.01ms !important;
+        animation-duration: 0.01ms;
+        transition-duration: 0.01ms;
     }
 }

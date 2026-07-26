@@ -2,27 +2,21 @@ import type { Api } from "grammy";
 import type { ChatFullInfo } from "grammy/types";
 import { parseChatRef } from "../chatref";
 
+/** Renders a source and its destinations as a tree, for /get. */
 export const formatObject = (obj: {
     [key: string]: number[] | undefined;
-}): string => {
-    let text = "";
-    for (const key in obj) {
-        text += `(${key})\n`;
-
-        if (obj[key] === undefined) {
-            text += "\n";
-        } else {
-            const len = obj[key]?.length ?? 0;
-            obj[key]?.forEach((value, index) => {
-                index === len - 1
-                    ? (text += `└─(${value})\n`)
-                    : (text += `├─(${value})\n`);
-            });
-        }
-    }
-
-    return text;
-};
+}): string =>
+    Object.entries(obj)
+        .map(([key, values]) => {
+            // undefined renders a blank line; an empty array renders nothing.
+            if (values === undefined) return `(${key})\n\n`;
+            const lines = values.map(
+                (value, i) =>
+                    `${i === values.length - 1 ? "└─" : "├─"}(${value})\n`
+            );
+            return `(${key})\n${lines.join("")}`;
+        })
+        .join("");
 
 export type ResolveResult =
     | { ok: true; chat: ChatFullInfo }

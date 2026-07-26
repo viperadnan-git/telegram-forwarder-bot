@@ -1,6 +1,10 @@
-import { MEDIA_KINDS, MediaKind, Rule, RouteConfig } from "./config";
-
 import type { Message } from "grammy/types";
+import {
+    MEDIA_KINDS,
+    type MediaKind,
+    type RouteConfig,
+    type Rule
+} from "./config";
 import { test as regexTest } from "./regex";
 
 /** The message's content type, used by media rules. */

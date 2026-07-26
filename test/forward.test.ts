@@ -1,8 +1,7 @@
-import { deliver, fanOut } from "../src/forward";
 import { describe, expect, test } from "bun:test";
-
 import type { Api } from "grammy";
 import type { Message } from "grammy/types";
+import { deliver, fanOut } from "../src/forward";
 import type { Route } from "../src/store";
 
 type Call = { method: string; args: any[] };
@@ -55,7 +54,9 @@ const albumPart = (id: number, caption?: string): Message =>
         date: 0,
         chat: { id: SRC, type: "channel", title: "s" },
         media_group_id: "g1",
-        photo: [{ file_id: `F${id}`, file_unique_id: "u", width: 1, height: 1 }],
+        photo: [
+            { file_id: `F${id}`, file_unique_id: "u", width: 1, height: 1 }
+        ],
         caption
     }) as Message;
 
@@ -75,12 +76,9 @@ describe("single message dispatch", () => {
 
     test("protectContent and silent are passed through", async () => {
         const { api, calls } = stubApi();
-        await deliver(
-            api,
-            route({ protectContent: true, silent: true }),
-            SRC,
-            [photoMsg()]
-        );
+        await deliver(api, route({ protectContent: true, silent: true }), SRC, [
+            photoMsg()
+        ]);
         expect(calls[0].args[3]).toMatchObject({
             protect_content: true,
             disable_notification: true
@@ -107,7 +105,9 @@ describe("single message dispatch", () => {
 
     test("stripping a text message sends nothing", async () => {
         const { api, calls } = stubApi();
-        await deliver(api, route({ caption: { strip: true } }), SRC, [textMsg()]);
+        await deliver(api, route({ caption: { strip: true } }), SRC, [
+            textMsg()
+        ]);
         expect(calls).toHaveLength(0);
     });
 
@@ -115,7 +115,9 @@ describe("single message dispatch", () => {
         const { api, calls } = stubApi();
         await deliver(
             api,
-            route({ filters: { blacklist: [{ type: "keyword", value: "spam" }] } }),
+            route({
+                filters: { blacklist: [{ type: "keyword", value: "spam" }] }
+            }),
             SRC,
             [textMsg("this is spam")]
         );
@@ -126,7 +128,9 @@ describe("single message dispatch", () => {
         const { api, calls } = stubApi();
         await deliver(
             api,
-            route({ filters: { whitelist: [{ type: "keyword", value: "btc" }] } }),
+            route({
+                filters: { whitelist: [{ type: "keyword", value: "btc" }] }
+            }),
             SRC,
             [textMsg("btc news")]
         );
@@ -163,7 +167,11 @@ describe("album dispatch", () => {
         expect(calls[0].method).toBe("sendMediaGroup");
         const media = calls[0].args[1];
         expect(media).toHaveLength(3);
-        expect(media[0]).toMatchObject({ type: "photo", media: "F1", caption: "cap!" });
+        expect(media[0]).toMatchObject({
+            type: "photo",
+            media: "F1",
+            caption: "cap!"
+        });
         // Uncaptioned parts stay uncaptioned; an append must not stamp every image.
         expect(media[1].caption).toBeUndefined();
         expect(media[2].caption).toBeUndefined();
@@ -192,7 +200,12 @@ describe("album dispatch", () => {
                 sticker: { file_id: "S" }
             } as unknown as Message
         ];
-        await deliver(api, route({ caption: { append: "!" } }), SRC, withSticker);
+        await deliver(
+            api,
+            route({ caption: { append: "!" } }),
+            SRC,
+            withSticker
+        );
         expect(calls.every((c) => c.method === "copyMessage")).toBe(true);
         expect(calls).toHaveLength(2);
     });
@@ -201,7 +214,9 @@ describe("album dispatch", () => {
         const { api, calls } = stubApi();
         await deliver(
             api,
-            route({ filters: { blacklist: [{ type: "keyword", value: "cap" }] } }),
+            route({
+                filters: { blacklist: [{ type: "keyword", value: "cap" }] }
+            }),
             SRC,
             parts
         );
@@ -215,7 +230,8 @@ describe("fanOut", () => {
         const api = {
             copyMessage: (dest: number) => {
                 calls.push(`copy:${dest}`);
-                if (dest === -2) return Promise.reject(new Error("chat not found"));
+                if (dest === -2)
+                    return Promise.reject(new Error("chat not found"));
                 return Promise.resolve({} as any);
             }
         } as unknown as Api;
@@ -240,7 +256,9 @@ describe("removeButtons", () => {
             message_id: 7,
             date: 0,
             chat: { id: SRC, type: "channel", title: "s" },
-            photo: [{ file_id: "F1", file_unique_id: "u", width: 1, height: 1 }],
+            photo: [
+                { file_id: "F1", file_unique_id: "u", width: 1, height: 1 }
+            ],
             caption: "cap",
             reply_markup: {
                 inline_keyboard: [[{ text: "Ad", url: "https://spam.example" }]]
@@ -255,7 +273,9 @@ describe("removeButtons", () => {
 
     test("removeButtons drops them", async () => {
         const { api, calls } = stubApi();
-        await deliver(api, route({ removeButtons: true }), SRC, [withButtons()]);
+        await deliver(api, route({ removeButtons: true }), SRC, [
+            withButtons()
+        ]);
         expect(calls[0].method).toBe("copyMessage");
         expect(calls[0].args[3].reply_markup).toBeUndefined();
     });
@@ -276,7 +296,9 @@ describe("removeButtons", () => {
         const { api, calls } = stubApi();
         const msg = {
             ...textMsg("hello"),
-            reply_markup: { inline_keyboard: [[{ text: "Ad", url: "https://x.example" }]] }
+            reply_markup: {
+                inline_keyboard: [[{ text: "Ad", url: "https://x.example" }]]
+            }
         } as Message;
         await deliver(
             api,
