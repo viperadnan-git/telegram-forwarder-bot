@@ -119,9 +119,8 @@ export const destinationKeyboard = () =>
 export async function startPicker(ctx: BotContext) {
     pending.delete(key(ctx.me.id, ctx.from?.id ?? 0));
     await ctx.reply(
-        "<b>Step 1 of 2</b> — choose the chat to forward <b>from</b>.\n\n" +
-            "<i>Channels where I am an administrator, and groups I am in, " +
-            "are listed.</i>",
+        "<b>Step 1 of 2</b> — the chat to forward <b>from</b>.\n\n" +
+            "<i>Only channels I administer and groups I am in.</i>",
         { reply_markup: sourceKeyboard() }
     );
 }
@@ -148,9 +147,8 @@ export default async function chat_shared_handler(ctx: BotContext) {
 
     if (!(await reachable(ctx, shared.chat_id))) {
         await ctx.reply(
-            `I cannot reach <b>${escapeHtml(name)}</b>.\n\n` +
-                "Add me to that chat first — as an administrator if it is a channel — " +
-                "then send /set again.",
+            `I cannot reach <b>${escapeHtml(name)}</b>. Add me there first ` +
+                "— as an administrator, if it is a channel — then send /set again.",
             { reply_markup: { remove_keyboard: true } }
         );
         return;
@@ -209,7 +207,7 @@ export default async function chat_shared_handler(ctx: BotContext) {
     await ctx.reply(
         `Forwarding <b>${escapeHtml(source.name)}</b> → ` +
             `<b>${escapeHtml(name)}</b>.\n\n` +
-            "Filters and caption rules for this destination are in Settings.",
+            "Filters and caption rules are in Settings.",
         {
             reply_markup: url
                 ? {

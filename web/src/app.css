@@ -712,6 +712,64 @@ button.chip {
     line-height: 1.45;
 }
 
+/* --- help ---------------------------------------------------------------- */
+
+.cmd {
+    font-family: var(--mono);
+    font-size: 14px;
+    color: var(--accent);
+}
+
+/* Native disclosure: no JS, and the platform handles keyboard and a11y. */
+.faq + .faq {
+    box-shadow: inset 0 0.5px 0 var(--separator);
+}
+
+.faq summary {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 13px var(--gutter);
+    font-size: 16px;
+    cursor: pointer;
+    list-style: none;
+    transition: background-color 0.4s ease-out;
+}
+
+.faq summary::-webkit-details-marker {
+    display: none;
+}
+
+.faq summary:active {
+    background: var(--fill);
+    transition-duration: 0s;
+}
+
+.faq[open] summary {
+    font-weight: 600;
+}
+
+.faq[open] summary .chevron {
+    transform: rotate(90deg);
+}
+
+.faq summary .chevron {
+    transition: transform 0.2s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.faq p {
+    margin: 0;
+    padding: 0 var(--gutter) 14px calc(var(--gutter));
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--subtitle);
+}
+
+a {
+    color: var(--accent);
+    text-decoration: none;
+}
+
 /* --- dialog -------------------------------------------------------------- */
 
 .scrim {

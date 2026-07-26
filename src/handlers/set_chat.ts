@@ -17,7 +17,6 @@ export default async function set_chat_handler(ctx: BotContext) {
     if (!from || !to) {
         await ctx.reply(
             "Two chats are needed.\n<pre>/set (source) (destination)</pre>\n" +
-                "Each can be a chat id, an @username, or a t.me link.\n\n" +
                 "Or send /set on its own to pick them from a list."
         );
         return;
@@ -50,6 +49,7 @@ export default async function set_chat_handler(ctx: BotContext) {
     }
 
     await ctx.reply(
-        `Forwarding new messages.\n<pre>${source.chat.id} -> ${dest.chat.id}</pre>`
+        `Forwarding <b>${escapeHtml(source.chat.title ?? String(source.chat.id))}</b> → ` +
+            `<b>${escapeHtml(dest.chat.title ?? String(dest.chat.id))}</b>.`
     );
 }

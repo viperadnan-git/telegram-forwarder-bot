@@ -17,9 +17,7 @@ function extractBotToken(msgText: string, entities: Array<MessageEntity>) {
 
 export default async function bot_token_handler(ctx: BotContext) {
     if (!WEBHOOK_HOST) {
-        await ctx.reply(
-            "Cloning bots is not configured. Please contact the bot owner."
-        );
+        await ctx.reply("Cloning is not set up on this instance.");
         return;
     }
 
@@ -43,14 +41,14 @@ export default async function bot_token_handler(ctx: BotContext) {
                     senderId
                 );
                 await ctx.reply(
-                    "Bot cloned and you are the owner of the bot. Start using it!"
+                    "Done — that bot is yours. Send it /set to start forwarding."
                 );
             } catch (error: any) {
                 logger.warn(`Error when setting webhook: ${error.message}`);
             }
         } else {
             await db.setOwner(parseInt(bot_token.split(":")[0], 10), senderId);
-            await ctx.reply("Bot is already cloned and you are the owner.");
+            await ctx.reply("That bot is already set up, and it is yours.");
         }
     } else {
         await ctx.reply(

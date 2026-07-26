@@ -3,10 +3,11 @@ import * as api from "./lib/api";
 import { ApiError } from "./lib/api";
 import ChatInput from "./lib/ChatInput.svelte";
 import ChatLabel from "./lib/ChatLabel.svelte";
+import Help from "./lib/Help.svelte";
 import NoAccess from "./lib/NoAccess.svelte";
 import RouteEditor from "./lib/RouteEditor.svelte";
 import Skeleton from "./lib/Skeleton.svelte";
-import { botId, close, confirm, init } from "./lib/telegram";
+import { botId, close, confirm, init, page } from "./lib/telegram";
 import { type Route, type RouteConfig, withDefaults } from "./lib/types";
 
 let routes = $state<Route[]>([]);
@@ -155,7 +156,11 @@ async function remove() {
     editing = null;
 }
 
-if (botId()) {
+const showHelp = page() === "help";
+
+if (showHelp) {
+    loading = false;
+} else if (botId()) {
     load();
 } else {
     loading = false;
@@ -210,7 +215,9 @@ if (botId()) {
     {/if}
 {/snippet}
 
-{#if denied}
+{#if showHelp}
+    <Help />
+{:else if denied}
     <NoAccess reason={denied} />
 {:else}
 <div class="page">

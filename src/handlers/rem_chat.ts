@@ -6,11 +6,8 @@ export default async function rem_chat_handler(ctx: BotContext) {
     const match = (ctx.match as string)?.trim();
     if (!match) {
         await ctx.reply(
-            "Send the source chat, and optionally one destination.\n" +
-                "<pre>/rem (source) (destination)</pre>\n" +
-                "To remove every destination for a source:\n" +
-                "<pre>/rem (source)</pre>\n" +
-                "Each can be a chat id, an @username, or a t.me link."
+            "<pre>/rem (source) (destination)</pre>removes one destination.\n" +
+                "<pre>/rem (source)</pre>removes all of them."
         );
         return;
     }

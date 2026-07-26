@@ -16,7 +16,7 @@ export default async function set_owner_handler(ctx: BotContext) {
         if (!resolved.ok) {
             await ctx.reply(
                 `Could not find that user: ${resolved.error}\n` +
-                    "They need to have started a conversation with me first."
+                    "They need to have messaged me first."
             );
             return;
         }
@@ -31,7 +31,7 @@ export default async function set_owner_handler(ctx: BotContext) {
         } else {
             await db.setOwner(ctx.me.id, ctx.from?.id as number);
             await ctx.reply(
-                "You are now the owner of this bot.\n\nTo change owner:\n<pre>/set_owner (user_id)</pre>"
+                "You own this bot now. Hand it over with /set_owner (user_id)."
             );
         }
     }

@@ -90,8 +90,10 @@ export const getBotById = (botId: number) => {
 };
 
 /** The bot id is verified against the initData signature, so it is safe in the URL. */
-export const miniAppUrl = (botId: number) =>
-    WEBHOOK_HOST ? `${WEBHOOK_HOST}/app?bot=${botId}` : undefined;
+export const miniAppUrl = (botId: number, page?: string) =>
+    WEBHOOK_HOST
+        ? `${WEBHOOK_HOST}/app?bot=${botId}${page ? `&page=${page}` : ""}`
+        : undefined;
 
 const wrapper =
     (handler: (ctx: BotContext) => Promise<void>) =>

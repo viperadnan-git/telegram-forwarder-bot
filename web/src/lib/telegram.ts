@@ -25,6 +25,10 @@ export function botId(): number {
     return Number(fromQuery ?? fromStart ?? 0);
 }
 
+/** Which screen to show. Static pages need no bot id and no auth. */
+export const page = (): string =>
+    new URLSearchParams(location.search).get("page") ?? "";
+
 export function init() {
     webApp?.ready();
     webApp?.expand();
