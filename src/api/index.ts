@@ -14,8 +14,11 @@ import { verifyInitData } from "./auth";
 
 type AuthedRequest = Request & { botId: number; userId: number };
 
+// Telegram mints initData once when the app opens and never refreshes it, so
+// this bounds a whole session, not a single request. Too short and a long edit
+// fails on save.
 const MAX_INITDATA_AGE_SECONDS =
-    Number(process.env.INITDATA_MAX_AGE_SECONDS) || 300;
+    Number(process.env.INITDATA_MAX_AGE_SECONDS) || 86_400;
 
 /** A valid signature proves identity, not ownership; both are checked. */
 async function authenticate(req: Request, res: Response, next: NextFunction) {
@@ -65,7 +68,7 @@ const asHandler =
 
 export function createApiRouter(): Router {
     const router = express.Router();
-    router.use(express.json({ limit: "64kb" }));
+    // Body parsing is global in index.ts; a second parser here would no-op.
     router.use((req, res, next) => {
         authenticate(req, res, next).catch(next);
     });

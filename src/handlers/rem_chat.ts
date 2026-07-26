@@ -1,5 +1,5 @@
 import type { BotContext } from "../bot";
-import { resolveChat } from "../modules/utils";
+import { escapeHtml, resolveChat } from "../modules/utils";
 import db from "../store";
 
 export default async function rem_chat_handler(ctx: BotContext) {
@@ -20,7 +20,7 @@ export default async function rem_chat_handler(ctx: BotContext) {
     const source = await resolveChat(ctx.api, sourceInput);
     if (!source.ok) {
         await ctx.reply(
-            `Could not use <code>${sourceInput}</code>: ${source.error}`
+            `Could not use <code>${escapeHtml(sourceInput)}</code>: ${source.error}`
         );
         return;
     }
@@ -30,7 +30,7 @@ export default async function rem_chat_handler(ctx: BotContext) {
         const dest = await resolveChat(ctx.api, destInput);
         if (!dest.ok) {
             await ctx.reply(
-                `Could not use <code>${destInput}</code>: ${dest.error}`
+                `Could not use <code>${escapeHtml(destInput)}</code>: ${dest.error}`
             );
             return;
         }

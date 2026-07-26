@@ -21,6 +21,7 @@ export type StoredRoute = {
     config: RouteConfig;
     sourceName: string;
     destName: string;
+    updatedAt: Date;
 };
 
 const routeCache = new Cache<Route[]>("routes");
@@ -44,6 +45,23 @@ class Store {
             return row?.ownerId ?? null;
         });
         return owner ?? undefined;
+    }
+
+    /** False once the bot-name modifier migration has run for this bot. */
+    async needsLegacyMigration(botId: number): Promise<boolean> {
+        const [row] = await db
+            .select({ at: bots.legacyFlagsMigratedAt })
+            .from(bots)
+            .where(eq(bots.botId, botId))
+            .limit(1);
+        return row !== undefined && row.at === null;
+    }
+
+    async markLegacyMigrated(botId: number) {
+        await db
+            .update(bots)
+            .set({ legacyFlagsMigratedAt: new Date() })
+            .where(eq(bots.botId, botId));
     }
 
     async setOwner(botId: number, userId: number) {
@@ -123,7 +141,8 @@ class Store {
                 enabled: routes.enabled,
                 config: routes.config,
                 sourceName: source.title,
-                destName: dest.title
+                destName: dest.title,
+                updatedAt: routes.updatedAt
             })
             .from(routes)
             .innerJoin(source, eq(source.chatId, routes.sourceChatId))
@@ -157,8 +176,7 @@ class Store {
             chatId: chat.chatId,
             title: chat.title || UNNAMED_CHAT,
             username: chat.username || UNKNOWN_USERNAME,
-            type: chat.type ?? null,
-            updatedAt: new Date()
+            type: chat.type ?? null
         };
         await db
             .insert(chats)
@@ -166,7 +184,6 @@ class Store {
             .onConflictDoUpdate({ target: chats.chatId, set: values });
     }
 
-    /** Every chat id this bot's routes point at. */
     async referencedChatIds(botId: number): Promise<number[]> {
         const rows = await db
             .select({

@@ -5,7 +5,12 @@ import Check from "./Check.svelte";
 import RouteHeader from "./RouteHeader.svelte";
 import RuleList from "./RuleList.svelte";
 import Switch from "./Switch.svelte";
-import { type Route, type RouteConfig, withDefaults } from "./types";
+import {
+    type Route,
+    type RouteConfig,
+    relativeTime,
+    withDefaults
+} from "./types";
 
 let {
     route,
@@ -87,6 +92,10 @@ const removeReplacement = (i: number) =>
             destChatId={route.destChatId}
             destName={route.destName}
         />
+
+        {#if route.updatedAt}
+            <p class="note">Last updated {relativeTime(route.updatedAt)}</p>
+        {/if}
 
         <h2 class="section-title">Status</h2>
         <div class="card">

@@ -1,5 +1,5 @@
 import type { BotContext } from "../bot";
-import { resolveChat } from "../modules/utils";
+import { escapeHtml, resolveChat } from "../modules/utils";
 import db from "../store";
 import { startPicker } from "./pick";
 
@@ -25,13 +25,17 @@ export default async function set_chat_handler(ctx: BotContext) {
 
     const source = await resolveChat(ctx.api, from);
     if (!source.ok) {
-        await ctx.reply(`Could not use <code>${from}</code>: ${source.error}`);
+        await ctx.reply(
+            `Could not use <code>${escapeHtml(from)}</code>: ${source.error}`
+        );
         return;
     }
 
     const dest = await resolveChat(ctx.api, to);
     if (!dest.ok) {
-        await ctx.reply(`Could not use <code>${to}</code>: ${dest.error}`);
+        await ctx.reply(
+            `Could not use <code>${escapeHtml(to)}</code>: ${dest.error}`
+        );
         return;
     }
 

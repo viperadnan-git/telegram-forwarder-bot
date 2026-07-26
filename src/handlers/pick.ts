@@ -4,6 +4,7 @@ import type {
 } from "grammy/types";
 import { type BotContext, miniAppUrl } from "../bot";
 import logger from "../modules/logger";
+import { escapeHtml } from "../modules/utils";
 import db from "../store";
 
 /**
@@ -147,7 +148,7 @@ export default async function chat_shared_handler(ctx: BotContext) {
 
     if (!(await reachable(ctx, shared.chat_id))) {
         await ctx.reply(
-            `I cannot reach <b>${name}</b>.\n\n` +
+            `I cannot reach <b>${escapeHtml(name)}</b>.\n\n` +
                 "Add me to that chat first — as an administrator if it is a channel — " +
                 "then send /set again.",
             { reply_markup: { remove_keyboard: true } }
@@ -176,7 +177,7 @@ export default async function chat_shared_handler(ctx: BotContext) {
             at: Date.now()
         });
         await ctx.reply(
-            `Source: <b>${name}</b>\n\n` +
+            `Source: <b>${escapeHtml(name)}</b>\n\n` +
                 "<b>Step 2 of 2</b> — choose the chat to forward <b>to</b>.",
             { reply_markup: destinationKeyboard() }
         );
@@ -206,7 +207,8 @@ export default async function chat_shared_handler(ctx: BotContext) {
     // or the removal; the picker keyboard is one_time_keyboard regardless.
     const url = miniAppUrl(ctx.me.id);
     await ctx.reply(
-        `Forwarding <b>${source.name}</b> → <b>${name}</b>.\n\n` +
+        `Forwarding <b>${escapeHtml(source.name)}</b> → ` +
+            `<b>${escapeHtml(name)}</b>.\n\n` +
             "Filters and caption rules for this destination are in Settings.",
         {
             reply_markup: url

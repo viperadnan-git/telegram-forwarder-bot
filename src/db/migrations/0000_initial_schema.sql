@@ -1,6 +1,7 @@
 CREATE TABLE "bots" (
 	"bot_id" bigint PRIMARY KEY NOT NULL,
 	"owner_id" bigint,
+	"legacy_flags_migrated_at" timestamp with time zone,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
@@ -20,6 +21,7 @@ CREATE TABLE "routes" (
 	"enabled" boolean DEFAULT true NOT NULL,
 	"config" jsonb DEFAULT '{}'::jsonb NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "routes_bot_source_dest_key" UNIQUE("bot_id","source_chat_id","dest_chat_id")
 );
 --> statement-breakpoint

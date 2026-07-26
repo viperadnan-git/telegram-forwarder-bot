@@ -23,6 +23,10 @@ export const bots = pgTable("bots", {
     // Tokens are deliberately not stored.
     botId: bigint("bot_id", { mode: "number" }).primaryKey(),
     ownerId: bigint("owner_id", { mode: "number" }),
+    // One-shot marker for the bot-name modifier migration in legacy.ts.
+    legacyFlagsMigratedAt: timestamp("legacy_flags_migrated_at", {
+        withTimezone: true
+    }),
     createdAt: timestamp("created_at", { withTimezone: true })
         .notNull()
         .defaultNow()
@@ -57,6 +61,10 @@ export const routes = pgTable(
         enabled: boolean("enabled").notNull().default(true),
         config: jsonb("config").$type<RouteConfig>().notNull().default({}),
         createdAt: timestamp("created_at", { withTimezone: true })
+            .notNull()
+            .defaultNow(),
+        // Maintained by the set_updated_at trigger, so raw SQL bumps it too.
+        updatedAt: timestamp("updated_at", { withTimezone: true })
             .notNull()
             .defaultNow()
     },
