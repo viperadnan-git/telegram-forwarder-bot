@@ -22,8 +22,11 @@ beforeAll(() => {
             .sort(([a], [b]) => (a < b ? -1 : 1))
             .map(([k, v]) => `${k}=${v}`);
         const dcs = [`${botId}:WebAppData`, ...pairs].join("\n");
-        const signature = sign(null, Buffer.from(dcs, "utf8"), privateKey)
-            .toString("base64url");
+        const signature = sign(
+            null,
+            Buffer.from(dcs, "utf8"),
+            privateKey
+        ).toString("base64url");
 
         const params = new URLSearchParams(fields);
         params.set("signature", signature);
@@ -75,7 +78,9 @@ describe("verifyInitData", () => {
 
     test("accepts initData inside the freshness window", () => {
         const recent = { ...validFields(), auth_date: String(AUTH_DATE - 200) };
-        expect(verifyInitData(signInitData(recent), BOT_ID, opts()).ok).toBe(true);
+        expect(verifyInitData(signInitData(recent), BOT_ID, opts()).ok).toBe(
+            true
+        );
     });
 
     test("fails closed when signature is absent", () => {

@@ -1,6 +1,6 @@
-import { BotContext } from "../bot";
-import db from "../store";
+import type { BotContext } from "../bot";
 import { resolveChat } from "../modules/utils";
+import db from "../store";
 
 export default async function rem_chat_handler(ctx: BotContext) {
     const match = (ctx.match as string)?.trim();
@@ -40,7 +40,7 @@ export default async function rem_chat_handler(ctx: BotContext) {
     await db.remChatMap(ctx.me.id, source.chat.id, destChatId);
     await ctx.reply(
         `Forwarding stopped.\n<pre>${source.chat.id}${
-            destChatId ? " -> " + destChatId : " (all destinations)"
+            destChatId ? ` -> ${destChatId}` : " (all destinations)"
         }</pre>`
     );
 }

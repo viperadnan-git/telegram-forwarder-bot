@@ -1,8 +1,10 @@
-import { BotContext, miniAppUrl } from "../bot";
-
-import type { ChatAdministratorRights, ReplyKeyboardMarkup } from "grammy/types";
-import db from "../store";
+import type {
+    ChatAdministratorRights,
+    ReplyKeyboardMarkup
+} from "grammy/types";
+import { type BotContext, miniAppUrl } from "../bot";
 import logger from "../modules/logger";
+import db from "../store";
 
 /**
  * Native chat picker: a `request_chat` reply-keyboard button returns a
@@ -159,7 +161,9 @@ export default async function chat_shared_handler(ctx: BotContext) {
             title: shared.title,
             username: shared.username
         })
-        .catch((err) => logger.warn(`Could not save chat name: ${err.message}`));
+        .catch((err) =>
+            logger.warn(`Could not save chat name: ${err.message}`)
+        );
 
     const isSource =
         shared.request_id === REQUEST.SOURCE_CHANNEL ||

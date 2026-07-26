@@ -1,42 +1,42 @@
 <script lang="ts">
-    import { copyText, haptic } from "./telegram";
+import { copyText, haptic } from "./telegram";
 
-    // Stacked, not side by side: two chats on one row truncate on a phone.
-    let {
-        sourceChatId,
-        sourceName,
-        destChatId,
-        destName
-    }: {
-        sourceChatId: number;
-        sourceName?: string;
-        destChatId: number;
-        destName?: string;
-    } = $props();
+// Stacked, not side by side: two chats on one row truncate on a phone.
+let {
+    sourceChatId,
+    sourceName,
+    destChatId,
+    destName
+}: {
+    sourceChatId: number;
+    sourceName?: string;
+    destChatId: number;
+    destName?: string;
+} = $props();
 
-    const endpoints = $derived([
-        { role: "From", id: sourceChatId, name: sourceName, filled: false },
-        { role: "To", id: destChatId, name: destName, filled: true }
-    ]);
+const endpoints = $derived([
+    { role: "From", id: sourceChatId, name: sourceName, filled: false },
+    { role: "To", id: destChatId, name: destName, filled: true }
+]);
 
-    let copied = $state<number | null>(null);
-    let timer: ReturnType<typeof setTimeout>;
+let copied = $state<number | null>(null);
+let timer: ReturnType<typeof setTimeout>;
 
-    async function copy(id: number) {
-        if (await copyText(String(id))) {
-            haptic("success");
-            copied = id;
-            clearTimeout(timer);
-            timer = setTimeout(() => (copied = null), 1600);
-        }
+async function copy(id: number) {
+    if (await copyText(String(id))) {
+        haptic("success");
+        copied = id;
+        clearTimeout(timer);
+        timer = setTimeout(() => (copied = null), 1600);
     }
+}
 
-    const split = (id: number) => {
-        const t = String(id);
-        return t.startsWith("-100")
-            ? { pre: "-100", body: t.slice(4) }
-            : { pre: "", body: t };
-    };
+const split = (id: number) => {
+    const t = String(id);
+    return t.startsWith("-100")
+        ? { pre: "-100", body: t.slice(4) }
+        : { pre: "", body: t };
+};
 </script>
 
 <div class="card endpoints">

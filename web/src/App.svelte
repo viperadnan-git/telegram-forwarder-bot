@@ -1,165 +1,166 @@
 <script lang="ts">
-    import * as api from "./lib/api";
+import * as api from "./lib/api";
+import { ApiError } from "./lib/api";
+import ChatInput from "./lib/ChatInput.svelte";
+import ChatLabel from "./lib/ChatLabel.svelte";
+import NoAccess from "./lib/NoAccess.svelte";
+import RouteEditor from "./lib/RouteEditor.svelte";
+import Skeleton from "./lib/Skeleton.svelte";
+import { botId, close, confirm, init } from "./lib/telegram";
+import { type Route, type RouteConfig, withDefaults } from "./lib/types";
 
-    import { type Route, type RouteConfig, withDefaults } from "./lib/types";
-    import { botId, close, confirm, init } from "./lib/telegram";
+let routes = $state<Route[]>([]);
+let loading = $state(true);
+let error = $state("");
+let denied = $state<"unclaimed" | "not_owner" | null>(null);
+let editing = $state<Route | null>(null);
+let refreshing = $state(false);
+let refreshNote = $state("");
+let confirmingRefresh = $state(false);
 
-    import { ApiError } from "./lib/api";
-    import ChatInput from "./lib/ChatInput.svelte";
-    import ChatLabel from "./lib/ChatLabel.svelte";
-    import Skeleton from "./lib/Skeleton.svelte";
-    import NoAccess from "./lib/NoAccess.svelte";
-    import RouteEditor from "./lib/RouteEditor.svelte";
+// How many getChat calls a refresh costs.
+const chatCount = $derived(
+    new Set(routes.flatMap((r) => [r.sourceChatId, r.destChatId])).size
+);
+let starting = $state(false);
+let manual = $state(false);
+let adding = $state(false);
+let newSource = $state<number | null>(null);
+let newDest = $state<number | null>(null);
+let sourceInput = $state<ChatInput>();
+let destInput = $state<ChatInput>();
 
-    let routes = $state<Route[]>([]);
-    let loading = $state(true);
-    let error = $state("");
-    let denied = $state<"unclaimed" | "not_owner" | null>(null);
-    let editing = $state<Route | null>(null);
-    let refreshing = $state(false);
-    let refreshNote = $state("");
-    let confirmingRefresh = $state(false);
+const canAdd = $derived(
+    newSource !== null && newDest !== null && newSource !== newDest
+);
 
-    // How many getChat calls a refresh costs.
-    const chatCount = $derived(
-        new Set(routes.flatMap((r) => [r.sourceChatId, r.destChatId])).size
-    );
-    let starting = $state(false);
-    let manual = $state(false);
-    let adding = $state(false);
-    let newSource = $state<number | null>(null);
-    let newDest = $state<number | null>(null);
-    let sourceInput = $state<ChatInput>();
-    let destInput = $state<ChatInput>();
+function cancelManual() {
+    sourceInput?.reset();
+    destInput?.reset();
+    manual = false;
+    error = "";
+}
 
-    const canAdd = $derived(
-        newSource !== null && newDest !== null && newSource !== newDest
-    );
-
-    function cancelManual() {
+async function addManually() {
+    if (!canAdd) return;
+    adding = true;
+    error = "";
+    try {
+        routes = [...routes, await api.createRoute(newSource!, newDest!)];
         sourceInput?.reset();
         destInput?.reset();
         manual = false;
-        error = "";
+    } catch (e: any) {
+        error = e.message;
+    } finally {
+        adding = false;
     }
+}
 
-    async function addManually() {
-        if (!canAdd) return;
-        adding = true;
-        error = "";
-        try {
-            routes = [...routes, await api.createRoute(newSource!, newDest!)];
-            sourceInput?.reset();
-            destInput?.reset();
-            manual = false;
-        } catch (e: any) {
+// The picker is a reply keyboard, which a Mini App cannot render.
+async function startSetFlow() {
+    starting = true;
+    error = "";
+    try {
+        await api.startSetFlow();
+        close();
+    } catch (e: any) {
+        error = e.message;
+        starting = false;
+    }
+}
+
+init();
+
+async function refresh() {
+    confirmingRefresh = false;
+    refreshing = true;
+    refreshNote = "";
+    error = "";
+    try {
+        const result = await api.refreshChatNames();
+        routes = result.routes;
+        refreshNote = result.failed
+            ? `${result.updated} updated, ${result.failed} unreachable — I may have been removed from those chats.`
+            : `${result.updated} chat ${result.updated === 1 ? "name" : "names"} updated.`;
+    } catch (e: any) {
+        error = e.message;
+    } finally {
+        refreshing = false;
+    }
+}
+
+const grouped = $derived(
+    [
+        ...new Map(
+            routes.map((r) => [
+                r.sourceChatId,
+                routes.filter((x) => x.sourceChatId === r.sourceChatId)
+            ])
+        )
+    ].sort(([a], [b]) => a - b)
+);
+
+/** Only non-default settings, so divergence between destinations shows. */
+function chips(route: Route): string[] {
+    const c = withDefaults(route.config);
+    const out: string[] = [];
+    if (c.mode === "forward") out.push("forward");
+    if (c.protectContent) out.push("protected");
+    if (c.silent) out.push("silent");
+    if (c.removeButtons) out.push("no buttons");
+    if (c.filters.whitelist.length)
+        out.push(`${c.filters.whitelist.length} allow`);
+    if (c.filters.blacklist.length)
+        out.push(`${c.filters.blacklist.length} block`);
+    if (c.caption.strip) out.push("no caption");
+    if (c.caption.removeLinks) out.push("no links");
+    if (c.caption.removeMentions) out.push("no mentions");
+    if (c.caption.prepend || c.caption.append) out.push("signature");
+    if (c.caption.replace.length)
+        out.push(`${c.caption.replace.length} replace`);
+    return out;
+}
+
+const plural = (n: number, one: string, many = `${one}s`) =>
+    `${n} ${n === 1 ? one : many}`;
+
+async function load() {
+    loading = true;
+    error = "";
+    try {
+        routes = await api.listRoutes();
+    } catch (e: any) {
+        if (e instanceof ApiError && e.status === 403) {
+            denied = e.reason === "unclaimed" ? "unclaimed" : "not_owner";
+        } else {
             error = e.message;
-        } finally {
-            adding = false;
         }
-    }
-
-    // The picker is a reply keyboard, which a Mini App cannot render.
-    async function startSetFlow() {
-        starting = true;
-        error = "";
-        try {
-            await api.startSetFlow();
-            close();
-        } catch (e: any) {
-            error = e.message;
-            starting = false;
-        }
-    }
-
-    init();
-
-    async function refresh() {
-        confirmingRefresh = false;
-        refreshing = true;
-        refreshNote = "";
-        error = "";
-        try {
-            const result = await api.refreshChatNames();
-            routes = result.routes;
-            refreshNote = result.failed
-                ? `${result.updated} updated, ${result.failed} unreachable — I may have been removed from those chats.`
-                : `${result.updated} chat ${result.updated === 1 ? "name" : "names"} updated.`;
-        } catch (e: any) {
-            error = e.message;
-        } finally {
-            refreshing = false;
-        }
-    }
-
-    const grouped = $derived(
-        [
-            ...new Map(
-                routes.map((r) => [
-                    r.sourceChatId,
-                    routes.filter((x) => x.sourceChatId === r.sourceChatId)
-                ])
-            )
-        ].sort(([a], [b]) => a - b)
-    );
-
-    /** Only non-default settings, so divergence between destinations shows. */
-    function chips(route: Route): string[] {
-        const c = withDefaults(route.config);
-        const out: string[] = [];
-        if (c.mode === "forward") out.push("forward");
-        if (c.protectContent) out.push("protected");
-        if (c.silent) out.push("silent");
-        if (c.removeButtons) out.push("no buttons");
-        if (c.filters.whitelist.length) out.push(`${c.filters.whitelist.length} allow`);
-        if (c.filters.blacklist.length) out.push(`${c.filters.blacklist.length} block`);
-        if (c.caption.strip) out.push("no caption");
-        if (c.caption.removeLinks) out.push("no links");
-        if (c.caption.removeMentions) out.push("no mentions");
-        if (c.caption.prepend || c.caption.append) out.push("signature");
-        if (c.caption.replace.length) out.push(`${c.caption.replace.length} replace`);
-        return out;
-    }
-
-    const plural = (n: number, one: string, many = one + "s") =>
-        `${n} ${n === 1 ? one : many}`;
-
-    async function load() {
-        loading = true;
-        error = "";
-        try {
-            routes = await api.listRoutes();
-        } catch (e: any) {
-            if (e instanceof ApiError && e.status === 403) {
-                denied = e.reason === "unclaimed" ? "unclaimed" : "not_owner";
-            } else {
-                error = e.message;
-            }
-        } finally {
-            loading = false;
-        }
-    }
-
-    async function save(patch: { config: RouteConfig; enabled: boolean }) {
-        const updated = await api.updateRoute(editing!.id, patch);
-        routes = routes.map((r) =>
-            r.id === updated.id ? { ...r, ...updated } : r
-        );
-    }
-
-    async function remove() {
-        if (!(await confirm("Delete this destination?"))) return;
-        await api.deleteRoute(editing!.id);
-        routes = routes.filter((r) => r.id !== editing!.id);
-        editing = null;
-    }
-
-    if (botId()) {
-        load();
-    } else {
+    } finally {
         loading = false;
-        error = "Open this page from your bot so it knows which bot to configure.";
     }
+}
+
+async function save(patch: { config: RouteConfig; enabled: boolean }) {
+    const updated = await api.updateRoute(editing!.id, patch);
+    routes = routes.map((r) =>
+        r.id === updated.id ? { ...r, ...updated } : r
+    );
+}
+
+async function remove() {
+    if (!(await confirm("Delete this destination?"))) return;
+    await api.deleteRoute(editing!.id);
+    routes = routes.filter((r) => r.id !== editing!.id);
+    editing = null;
+}
+
+if (botId()) {
+    load();
+} else {
+    loading = false;
+    error = "Open this page from your bot so it knows which bot to configure.";
+}
 </script>
 
 {#snippet addSection()}

@@ -1,12 +1,15 @@
-import { NextFunction, Request, Response, Router } from "express";
-
-import db from "../store";
-import express from "express";
+import express, {
+    type NextFunction,
+    type Request,
+    type Response,
+    type Router
+} from "express";
 import { getBotById } from "../bot";
+import { validateConfig } from "../config";
+import { sourceKeyboard } from "../handlers/pick";
 import logger from "../modules/logger";
 import { resolveChat } from "../modules/utils";
-import { sourceKeyboard } from "../handlers/pick";
-import { validateConfig } from "../config";
+import db from "../store";
 import { verifyInitData } from "./auth";
 
 type AuthedRequest = Request & { botId: number; userId: number };
@@ -118,7 +121,8 @@ export function createApiRouter(): Router {
                     await db.saveChat({
                         chatId: chat.id,
                         title: "title" in chat ? chat.title : undefined,
-                        username: "username" in chat ? chat.username : undefined,
+                        username:
+                            "username" in chat ? chat.username : undefined,
                         type: chat.type
                     });
                     updated++;
@@ -131,7 +135,11 @@ export function createApiRouter(): Router {
                 }
             }
 
-            res.json({ updated, failed, routes: await db.listRoutes(req.botId) });
+            res.json({
+                updated,
+                failed,
+                routes: await db.listRoutes(req.botId)
+            });
         })
     );
 
@@ -148,7 +156,10 @@ export function createApiRouter(): Router {
                 return;
             }
 
-            const result = await resolveChat(bot.api, String(req.body?.input ?? ""));
+            const result = await resolveChat(
+                bot.api,
+                String(req.body?.input ?? "")
+            );
             if (!result.ok) {
                 res.status(400).json({ error: result.error });
                 return;
@@ -157,7 +168,12 @@ export function createApiRouter(): Router {
             const chat = result.chat;
             const title = "title" in chat ? chat.title : undefined;
             const username = "username" in chat ? chat.username : undefined;
-            await db.saveChat({ chatId: chat.id, title, username, type: chat.type });
+            await db.saveChat({
+                chatId: chat.id,
+                title,
+                username,
+                type: chat.type
+            });
 
             res.json({ chatId: chat.id, title, username, type: chat.type });
         })
@@ -179,11 +195,17 @@ export function createApiRouter(): Router {
                 return;
             }
             if (sourceChatId === destChatId) {
-                res.status(400).json({ error: "A chat cannot forward to itself" });
+                res.status(400).json({
+                    error: "A chat cannot forward to itself"
+                });
                 return;
             }
 
-            const route = await db.createRoute(req.botId, sourceChatId, destChatId);
+            const route = await db.createRoute(
+                req.botId,
+                sourceChatId,
+                destChatId
+            );
             if (!route) {
                 res.status(409).json({ error: "That route already exists" });
                 return;

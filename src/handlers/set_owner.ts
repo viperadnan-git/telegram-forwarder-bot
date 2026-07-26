@@ -1,6 +1,6 @@
-import { BotContext } from "../bot";
-import db from "../store";
+import type { BotContext } from "../bot";
 import { resolveChat } from "../modules/utils";
+import db from "../store";
 
 export default async function set_owner_handler(ctx: BotContext) {
     const owner = await db.getOwner(ctx.me.id);

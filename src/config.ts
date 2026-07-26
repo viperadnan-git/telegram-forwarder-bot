@@ -1,6 +1,5 @@
-import { compile, isSupportedPattern } from "./regex";
-
 import { z } from "zod";
+import { compile, isSupportedPattern } from "./regex";
 
 export const MEDIA_KINDS = [
     "text",
@@ -144,7 +143,10 @@ export function validateConfig(raw: unknown): ValidationResult {
     for (const pattern of patterns) {
         const supported = isSupportedPattern(pattern);
         if (!supported.ok) {
-            return { ok: false, error: `Pattern /${pattern}/: ${supported.error}` };
+            return {
+                ok: false,
+                error: `Pattern /${pattern}/: ${supported.error}`
+            };
         }
     }
 

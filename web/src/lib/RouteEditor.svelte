@@ -1,69 +1,68 @@
 <script lang="ts">
-    import { type Route, type RouteConfig, withDefaults } from "./types";
+import { untrack } from "svelte";
+import Check from "./Check.svelte";
 
-    import RouteHeader from "./RouteHeader.svelte";
-    import Check from "./Check.svelte";
-    import RuleList from "./RuleList.svelte";
-    import Switch from "./Switch.svelte";
+import RouteHeader from "./RouteHeader.svelte";
+import RuleList from "./RuleList.svelte";
+import Switch from "./Switch.svelte";
+import { type Route, type RouteConfig, withDefaults } from "./types";
 
-    let {
-        route,
-        onsave,
-        onclose,
-        ondelete
-    }: {
-        route: Route;
-        onsave: (patch: {
-            config: RouteConfig;
-            enabled: boolean;
-        }) => Promise<void>;
-        onclose: () => void;
-        ondelete: () => Promise<void>;
-    } = $props();
+let {
+    route,
+    onsave,
+    onclose,
+    ondelete
+}: {
+    route: Route;
+    onsave: (patch: { config: RouteConfig; enabled: boolean }) => Promise<void>;
+    onclose: () => void;
+    ondelete: () => Promise<void>;
+} = $props();
 
-    // Safe to seed from props: the parent keys this component on route.id.
-    let config = $state<RouteConfig>(withDefaults(route.config));
-    let enabled = $state(route.enabled);
-    let saving = $state(false);
-    let error = $state("");
+// Seeded once, deliberately non-reactively: the parent keys this component on
+// route.id, so a different route remounts rather than reusing this state.
+let config = $state<RouteConfig>(untrack(() => withDefaults(route.config)));
+let enabled = $state(untrack(() => route.enabled));
+let saving = $state(false);
+let error = $state("");
 
-    // Surfaced here so the save does not fail server-side instead.
-    const transforms = $derived(
-        config.caption.strip ||
-            config.caption.removeLinks ||
-            config.caption.removeMentions ||
-            config.caption.replace.length > 0 ||
-            !!config.caption.prepend ||
-            !!config.caption.append
-    );
-    const conflict = $derived(
-        config.mode === "forward" && (transforms || config.removeButtons)
-    );
+// Surfaced here so the save does not fail server-side instead.
+const transforms = $derived(
+    config.caption.strip ||
+        config.caption.removeLinks ||
+        config.caption.removeMentions ||
+        config.caption.replace.length > 0 ||
+        !!config.caption.prepend ||
+        !!config.caption.append
+);
+const conflict = $derived(
+    config.mode === "forward" && (transforms || config.removeButtons)
+);
 
-    async function save() {
-        saving = true;
-        error = "";
-        try {
-            await onsave({
-                config: $state.snapshot(config) as RouteConfig,
-                enabled
-            });
-            onclose();
-        } catch (e: any) {
-            error = e.message;
-        } finally {
-            saving = false;
-        }
+async function save() {
+    saving = true;
+    error = "";
+    try {
+        await onsave({
+            config: $state.snapshot(config) as RouteConfig,
+            enabled
+        });
+        onclose();
+    } catch (e: any) {
+        error = e.message;
+    } finally {
+        saving = false;
     }
+}
 
-    const addReplacement = () =>
-        (config.caption.replace = [
-            ...config.caption.replace,
-            { pattern: "", replacement: "", isRegex: false }
-        ]);
+const addReplacement = () =>
+    (config.caption.replace = [
+        ...config.caption.replace,
+        { pattern: "", replacement: "", isRegex: false }
+    ]);
 
-    const removeReplacement = (i: number) =>
-        (config.caption.replace = config.caption.replace.filter((_, n) => n !== i));
+const removeReplacement = (i: number) =>
+    (config.caption.replace = config.caption.replace.filter((_, n) => n !== i));
 </script>
 
 <div class="sheet">

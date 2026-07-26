@@ -1,63 +1,63 @@
 <script lang="ts">
-    import { resolveChat, type ResolvedChat } from "./api";
+import { type ResolvedChat, resolveChat } from "./api";
 
-    import ChatLabel from "./ChatLabel.svelte";
+import ChatLabel from "./ChatLabel.svelte";
 
-    let {
-        label,
-        chatId = $bindable(null)
-    }: { label: string; chatId?: number | null } = $props();
+let {
+    label,
+    chatId = $bindable(null)
+}: { label: string; chatId?: number | null } = $props();
 
-    let raw = $state("");
-    let resolved = $state<ResolvedChat | null>(null);
-    let error = $state("");
-    let busy = $state(false);
+let raw = $state("");
+let resolved = $state<ResolvedChat | null>(null);
+let error = $state("");
+let busy = $state(false);
 
-    let timer: ReturnType<typeof setTimeout>;
-    let latest = 0;
+let timer: ReturnType<typeof setTimeout>;
+let latest = 0;
 
-    function onInput(value: string) {
-        raw = value;
-        resolved = null;
-        error = "";
-        chatId = null;
-        clearTimeout(timer);
+function onInput(value: string) {
+    raw = value;
+    resolved = null;
+    error = "";
+    chatId = null;
+    clearTimeout(timer);
 
-        const trimmed = value.trim();
-        if (!trimmed) return;
+    const trimmed = value.trim();
+    if (!trimmed) return;
 
-        // A plain id needs no round trip.
-        if (/^-?\d+$/.test(trimmed)) {
-            chatId = Number(trimmed);
-            return;
-        }
-
-        timer = setTimeout(() => void resolve(trimmed), 450);
+    // A plain id needs no round trip.
+    if (/^-?\d+$/.test(trimmed)) {
+        chatId = Number(trimmed);
+        return;
     }
 
-    async function resolve(input: string) {
-        const seq = ++latest;
-        busy = true;
-        try {
-            const chat = await resolveChat(input);
-            if (seq !== latest) return; // a newer keystroke won
-            resolved = chat;
-            chatId = chat.chatId;
-        } catch (e: any) {
-            if (seq !== latest) return;
-            error = e.message;
-        } finally {
-            if (seq === latest) busy = false;
-        }
-    }
+    timer = setTimeout(() => void resolve(trimmed), 450);
+}
 
-    export function reset() {
-        raw = "";
-        resolved = null;
-        error = "";
-        chatId = null;
-        latest++;
+async function resolve(input: string) {
+    const seq = ++latest;
+    busy = true;
+    try {
+        const chat = await resolveChat(input);
+        if (seq !== latest) return; // a newer keystroke won
+        resolved = chat;
+        chatId = chat.chatId;
+    } catch (e: any) {
+        if (seq !== latest) return;
+        error = e.message;
+    } finally {
+        if (seq === latest) busy = false;
     }
+}
+
+export function reset() {
+    raw = "";
+    resolved = null;
+    error = "";
+    chatId = null;
+    latest++;
+}
 </script>
 
 <div class="field">

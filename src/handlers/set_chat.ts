@@ -1,6 +1,6 @@
-import { BotContext } from "../bot";
-import db from "../store";
+import type { BotContext } from "../bot";
 import { resolveChat } from "../modules/utils";
+import db from "../store";
 import { startPicker } from "./pick";
 
 export default async function set_chat_handler(ctx: BotContext) {

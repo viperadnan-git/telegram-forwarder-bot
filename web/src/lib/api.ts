@@ -1,5 +1,5 @@
-import type { Route, RouteConfig } from "./types";
 import { botId, webApp } from "./telegram";
+import type { Route, RouteConfig } from "./types";
 
 /** Status and reason so callers can branch, not just display. */
 export class ApiError extends Error {

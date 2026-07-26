@@ -1,12 +1,11 @@
-import { AlbumBuffer, isAlbumPart } from "../albums";
-
 import type { Api } from "grammy";
-import { BotContext } from "../bot";
 import type { Message } from "grammy/types";
-import { backfillBotNameFlags } from "../legacy";
-import db from "../store";
+import { AlbumBuffer, isAlbumPart } from "../albums";
+import type { BotContext } from "../bot";
 import { fanOut } from "../forward";
+import { backfillBotNameFlags } from "../legacy";
 import logger from "../modules/logger";
+import db from "../store";
 
 async function dispatch(api: Api, botId: number, parts: Message[]) {
     const sourceChatId = parts[0].chat.id;

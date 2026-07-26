@@ -7,11 +7,9 @@
 
 import "dotenv/config";
 
-import { bots, chats, routes } from "../src/db/schema";
-
 import { Redis } from "ioredis";
-import { db } from "../src/db";
-import { sql as pg } from "../src/db";
+import { db, sql as pg } from "../src/db";
+import { bots, chats, routes } from "../src/db/schema";
 
 const OLD_PREFIX = "fwdbot";
 const CHUNK = 500;

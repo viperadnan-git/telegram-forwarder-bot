@@ -1,17 +1,15 @@
-import {
-    RouteConfig,
-    UNKNOWN_USERNAME,
-    UNNAMED_CHAT,
-    bots,
-    chats,
-    routes
-} from "./db/schema";
 import { and, eq, sql } from "drizzle-orm";
-
 import { alias } from "drizzle-orm/pg-core";
-
 import { Cache } from "./cache";
 import { db } from "./db";
+import {
+    bots,
+    chats,
+    type RouteConfig,
+    routes,
+    UNKNOWN_USERNAME,
+    UNNAMED_CHAT
+} from "./db/schema";
 
 export type Route = { destChatId: number; config: RouteConfig };
 
@@ -97,11 +95,7 @@ class Store {
         await routeCache.invalidate(routeKey(botId, sourceChatId));
     }
 
-    async remChatMap(
-        botId: number,
-        sourceChatId: number,
-        destChatId?: number
-    ) {
+    async remChatMap(botId: number, sourceChatId: number, destChatId?: number) {
         if (!Number.isFinite(sourceChatId)) return;
         await db
             .delete(routes)
@@ -266,7 +260,8 @@ class Store {
 
         const map: Record<string, number[]> = {};
         for (const { sourceChatId, destChatId } of rows) {
-            (map[sourceChatId] ??= []).push(destChatId);
+            map[sourceChatId] ??= [];
+            map[sourceChatId].push(destChatId);
         }
         return map;
     }

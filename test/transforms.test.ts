@@ -1,8 +1,7 @@
-import { applyCaption, clamp } from "../src/transforms";
 import { describe, expect, test } from "bun:test";
-
 import type { MessageEntity } from "grammy/types";
 import { parseConfig } from "../src/config";
+import { applyCaption, clamp } from "../src/transforms";
 
 const cap = (over: Record<string, unknown> = {}) =>
     parseConfig({ caption: over }).caption;
@@ -116,9 +115,7 @@ describe("applyCaption", () => {
     test("regex replacement replaces every occurrence", () => {
         const out = applyCaption(
             cap({
-                replace: [
-                    { pattern: "\\d+", replacement: "#", isRegex: true }
-                ]
+                replace: [{ pattern: "\\d+", replacement: "#", isRegex: true }]
             }),
             { text: "a1b22c333", entities: [] }
         );
@@ -140,10 +137,7 @@ describe("applyCaption", () => {
     test("removeLinks deletes url and text_link spans", () => {
         const out = applyCaption(cap({ removeLinks: true }), {
             text: "see t.me/spam ok",
-            entities: [
-                { type: "url", offset: 4, length: 9 },
-                bold(14, 2)
-            ]
+            entities: [{ type: "url", offset: 4, length: 9 }, bold(14, 2)]
         });
         expect(out.text).toBe("see  ok");
         expect(out.entities).toEqual([bold(5, 2)]);

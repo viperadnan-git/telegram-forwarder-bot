@@ -79,8 +79,9 @@ function regexEdits(
     const re = compile(pattern, "gu");
     re.lastIndex = 0;
     const edits: Edit[] = [];
-    let match: RegExpExecArray | null;
-    while ((match = re.exec(text) as RegExpExecArray | null) !== null) {
+    for (;;) {
+        const match = re.exec(text) as RegExpExecArray | null;
+        if (match === null) break;
         if (match[0].length === 0) {
             re.lastIndex++; // zero-length match would loop forever
             continue;

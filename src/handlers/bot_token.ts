@@ -1,13 +1,12 @@
-import { BotContext, WEBHOOK_HOST, botCreator, bots } from "../bot";
-
-import { MessageEntity } from "grammy/types";
-import db from "../store";
+import type { MessageEntity } from "grammy/types";
+import { type BotContext, botCreator, bots, WEBHOOK_HOST } from "../bot";
 import logger from "../modules/logger";
+import db from "../store";
 
 function extractBotToken(msgText: string, entities: Array<MessageEntity>) {
     for (const entity_ in entities) {
         const entity = entities[Number(entity_)];
-        if (entity.type == "code") {
+        if (entity.type === "code") {
             return msgText?.substring(
                 entity.offset,
                 entity.offset + entity.length
@@ -36,10 +35,13 @@ export default async function bot_token_handler(ctx: BotContext) {
         if (!bot) {
             bot = botCreator(bot_token);
             try {
-                await bot.api.setWebhook(WEBHOOK_HOST + "/bot" + bot_token, {
+                await bot.api.setWebhook(`${WEBHOOK_HOST}/bot${bot_token}`, {
                     drop_pending_updates: true
                 });
-                await db.setOwner(parseInt(bot_token.split(":")[0]), senderId);
+                await db.setOwner(
+                    parseInt(bot_token.split(":")[0], 10),
+                    senderId
+                );
                 await ctx.reply(
                     "Bot cloned and you are the owner of the bot. Start using it!"
                 );
@@ -47,7 +49,7 @@ export default async function bot_token_handler(ctx: BotContext) {
                 logger.warn(`Error when setting webhook: ${error.message}`);
             }
         } else {
-            await db.setOwner(parseInt(bot_token.split(":")[0]), senderId);
+            await db.setOwner(parseInt(bot_token.split(":")[0], 10), senderId);
             await ctx.reply("Bot is already cloned and you are the owner.");
         }
     } else {

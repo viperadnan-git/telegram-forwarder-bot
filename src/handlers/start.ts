@@ -1,4 +1,4 @@
-import { BotContext } from "../bot";
+import type { BotContext } from "../bot";
 
 export default async function start_handler(ctx: BotContext) {
     await ctx.reply(

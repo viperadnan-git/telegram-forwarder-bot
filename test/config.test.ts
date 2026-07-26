@@ -1,5 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { hasCaptionTransform, parseConfig, validateConfig } from "../src/config";
+import {
+    hasCaptionTransform,
+    parseConfig,
+    validateConfig
+} from "../src/config";
 
 describe("parseConfig", () => {
     test("an empty object gets today's behavior as defaults", () => {
@@ -47,9 +51,9 @@ describe("validateConfig", () => {
     });
 
     test("allows forward mode with protectContent, which is not a transform", () => {
-        expect(validateConfig({ mode: "forward", protectContent: true }).ok).toBe(
-            true
-        );
+        expect(
+            validateConfig({ mode: "forward", protectContent: true }).ok
+        ).toBe(true);
     });
 
     test("allows copy mode with caption transforms", () => {
@@ -92,7 +96,9 @@ describe("validateConfig", () => {
     test("accepts a valid regex filter", () => {
         expect(
             validateConfig({
-                filters: { blacklist: [{ type: "regex", pattern: "t\\.me/\\w+" }] }
+                filters: {
+                    blacklist: [{ type: "regex", pattern: "t\\.me/\\w+" }]
+                }
             }).ok
         ).toBe(true);
     });
@@ -110,6 +116,8 @@ describe("removeButtons validation", () => {
     });
 
     test("allowed with copy mode", () => {
-        expect(validateConfig({ mode: "copy", removeButtons: true }).ok).toBe(true);
+        expect(validateConfig({ mode: "copy", removeButtons: true }).ok).toBe(
+            true
+        );
     });
 });

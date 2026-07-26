@@ -1,22 +1,22 @@
 <script lang="ts">
-    import { close, openTelegramLink } from "./telegram";
+import { close, openTelegramLink } from "./telegram";
 
-    let { reason }: { reason: "unclaimed" | "not_owner" } = $props();
+let { reason }: { reason: "unclaimed" | "not_owner" } = $props();
 
-    const steps = [
-        {
-            title: "Create a bot",
-            body: "Open @BotFather and send /newbot. Pick a name and a username for it."
-        },
-        {
-            title: "Send the token here",
-            body: "BotFather replies with a message containing your token. Forward that whole message to this bot."
-        },
-        {
-            title: "It becomes yours",
-            body: "Your copy is set up and you are its owner, with your own forwarding rules."
-        }
-    ];
+const steps = [
+    {
+        title: "Create a bot",
+        body: "Open @BotFather and send /newbot. Pick a name and a username for it."
+    },
+    {
+        title: "Send the token here",
+        body: "BotFather replies with a message containing your token. Forward that whole message to this bot."
+    },
+    {
+        title: "It becomes yours",
+        body: "Your copy is set up and you are its owner, with your own forwarding rules."
+    }
+];
 </script>
 
 <div class="page">
