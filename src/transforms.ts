@@ -1,6 +1,6 @@
 import type { MessageEntity } from "grammy/types";
 import type { RouteConfig } from "./config";
-import { compile } from "./regex";
+import { matchSpans } from "./regex";
 
 // Telegram entity offsets are UTF-16 code units, as are JS string indices.
 // Do not introduce a conversion.
@@ -75,24 +75,11 @@ function regexEdits(
     pattern: string,
     replacement: string
 ): Edit[] {
-    // re2-wasm has no Symbol.matchAll; String.matchAll silently yields nothing.
-    const re = compile(pattern, "gu");
-    re.lastIndex = 0;
-    const edits: Edit[] = [];
-    for (;;) {
-        const match = re.exec(text) as RegExpExecArray | null;
-        if (match === null) break;
-        if (match[0].length === 0) {
-            re.lastIndex++; // zero-length match would loop forever
-            continue;
-        }
-        edits.push({
-            start: match.index,
-            end: match.index + match[0].length,
-            replacement
-        });
-    }
-    return edits;
+    return matchSpans(pattern, text).map(({ start, end }) => ({
+        start,
+        end,
+        replacement
+    }));
 }
 
 /** Telegram already located these, so no URL regex is needed. */
