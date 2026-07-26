@@ -1,0 +1,21 @@
+# Secrets must never enter the build context: COPY . . would put them in a
+# builder layer, which cache-to=gha then exports.
+.env
+*.env
+.env.*
+!.env.sample
+
+.git
+.github
+.local
+.vscode
+
+node_modules
+web/node_modules
+dist
+web/dist
+
+log.txt
+test
+*.md
+!README.md

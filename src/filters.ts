@@ -18,6 +18,17 @@ export function mediaKind(msg: Message): MediaKind {
 export const messageText = (msg: Message): string =>
     msg.text ?? msg.caption ?? "";
 
+/** Attachment file name, for rules targeting names and extensions. */
+export const messageFileName = (msg: Message): string =>
+    msg.document?.file_name ??
+    msg.video?.file_name ??
+    msg.audio?.file_name ??
+    msg.animation?.file_name ??
+    "";
+
+const haystack = (msg: Message, target: "text" | "filename") =>
+    target === "filename" ? messageFileName(msg) : messageText(msg);
+
 /** Every identity a sender rule can match: author, on-behalf-of chat, origin. */
 function senderIdentities(msg: Message) {
     const ids: number[] = [];
@@ -46,14 +57,14 @@ function senderIdentities(msg: Message) {
 export function matches(rule: Rule, msg: Message): boolean {
     switch (rule.type) {
         case "keyword": {
-            const text = messageText(msg);
+            const text = haystack(msg, rule.target);
             if (!text) return false;
             return rule.caseSensitive
                 ? text.includes(rule.value)
                 : text.toLowerCase().includes(rule.value.toLowerCase());
         }
         case "regex": {
-            const text = messageText(msg);
+            const text = haystack(msg, rule.target);
             return text ? regexTest(rule.pattern, text) : false;
         }
         case "media":

@@ -20,15 +20,23 @@ export const MEDIA_KINDS = [
 
 export type MediaKind = (typeof MEDIA_KINDS)[number];
 
+/** What a keyword or regex rule is tested against. */
+export const MATCH_TARGETS = ["text", "filename"] as const;
+export type MatchTarget = (typeof MATCH_TARGETS)[number];
+
+const targetField = z.enum(MATCH_TARGETS).default("text");
+
 const keywordRule = z.object({
     type: z.literal("keyword"),
     value: z.string().min(1).max(256),
-    caseSensitive: z.boolean().default(false)
+    caseSensitive: z.boolean().default(false),
+    target: targetField
 });
 
 const regexRule = z.object({
     type: z.literal("regex"),
-    pattern: z.string().min(1).max(512)
+    pattern: z.string().min(1).max(512),
+    target: targetField
 });
 
 const mediaRule = z.object({

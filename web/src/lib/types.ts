@@ -17,9 +17,16 @@ export const MEDIA_KINDS = [
 
 export type MediaKind = (typeof MEDIA_KINDS)[number];
 
+export type MatchTarget = "text" | "filename";
+
 export type Rule =
-    | { type: "keyword"; value: string; caseSensitive?: boolean }
-    | { type: "regex"; pattern: string }
+    | {
+          type: "keyword";
+          value: string;
+          caseSensitive?: boolean;
+          target: MatchTarget;
+      }
+    | { type: "regex"; pattern: string; target: MatchTarget }
     | { type: "media"; kinds: MediaKind[] }
     | { type: "sender"; ids: number[]; usernames: string[] };
 
