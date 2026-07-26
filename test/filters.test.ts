@@ -73,7 +73,12 @@ describe("rule types", () => {
     test("keyword is case insensitive by default", () => {
         expect(
             matches(
-                { type: "keyword", value: "HELLO", caseSensitive: false },
+                {
+                    type: "keyword",
+                    value: "HELLO",
+                    caseSensitive: false,
+                    target: "text"
+                },
                 msg({ text: "hello there" })
             )
         ).toBe(true);
@@ -82,7 +87,12 @@ describe("rule types", () => {
     test("keyword honors caseSensitive", () => {
         expect(
             matches(
-                { type: "keyword", value: "HELLO", caseSensitive: true },
+                {
+                    type: "keyword",
+                    value: "HELLO",
+                    caseSensitive: true,
+                    target: "text"
+                },
                 msg({ text: "hello there" })
             )
         ).toBe(false);
@@ -91,13 +101,13 @@ describe("rule types", () => {
     test("regex matches", () => {
         expect(
             matches(
-                { type: "regex", pattern: "t\\.me/\\w+" },
+                { type: "regex", pattern: "t\\.me/\\w+", target: "text" },
                 msg({ text: "join t.me/channel" })
             )
         ).toBe(true);
         expect(
             matches(
-                { type: "regex", pattern: "^\\d+$" },
+                { type: "regex", pattern: "^\\d+$", target: "text" },
                 msg({ text: "not a number" })
             )
         ).toBe(false);
@@ -106,7 +116,7 @@ describe("rule types", () => {
     test("a catastrophic pattern returns promptly", () => {
         const started = performance.now();
         matches(
-            { type: "regex", pattern: "(a+)+$" },
+            { type: "regex", pattern: "(a+)+$", target: "text" },
             msg({ text: `${"a".repeat(50)}!` })
         );
         expect(performance.now() - started).toBeLessThan(500);
@@ -147,5 +157,73 @@ describe("rule types", () => {
                 })
             )
         ).toBe(true);
+    });
+});
+
+describe("filename matching (issue #1)", () => {
+    const doc = (name: string) =>
+        msg({ document: { file_name: name } as any, caption: "holiday pics" });
+
+    test("keyword targets the file name, not the caption", () => {
+        const rule: Rule = {
+            type: "keyword",
+            value: "invoice",
+            caseSensitive: false,
+            target: "filename"
+        };
+        expect(matches(rule, doc("invoice-2026.pdf"))).toBe(true);
+        expect(matches(rule, doc("holiday.pdf"))).toBe(false);
+    });
+
+    test("a filename rule ignores caption text", () => {
+        const rule: Rule = {
+            type: "keyword",
+            value: "holiday",
+            caseSensitive: false,
+            target: "filename"
+        };
+        // "holiday" is in the caption but not the file name.
+        expect(matches(rule, doc("invoice.pdf"))).toBe(false);
+    });
+
+    test("regex matches an extension", () => {
+        const rule: Rule = {
+            type: "regex",
+            pattern: "\\.(mkv|avi)$",
+            target: "filename"
+        };
+        expect(matches(rule, doc("movie.mkv"))).toBe(true);
+        expect(matches(rule, doc("movie.mp4"))).toBe(false);
+    });
+
+    test("reads the name off video and audio too", () => {
+        const rule: Rule = {
+            type: "regex",
+            pattern: "\\.mp3$",
+            target: "filename"
+        };
+        expect(
+            matches(rule, msg({ audio: { file_name: "song.mp3" } as any }))
+        ).toBe(true);
+        expect(
+            matches(rule, msg({ video: { file_name: "clip.mp4" } as any }))
+        ).toBe(false);
+    });
+
+    test("target defaults to text, so existing rules are unchanged", () => {
+        const parsed = parseConfig({
+            filters: { blacklist: [{ type: "keyword", value: "spam" }] }
+        });
+        expect(parsed.filters.blacklist[0]).toMatchObject({ target: "text" });
+    });
+
+    test("blocking a file extension stops the forward", () => {
+        const c = cfg({
+            blacklist: [
+                { type: "regex", pattern: "\\.exe$", target: "filename" }
+            ]
+        });
+        expect(passes(c, doc("setup.exe"))).toBe(false);
+        expect(passes(c, doc("notes.txt"))).toBe(true);
     });
 });

@@ -1,6 +1,6 @@
 <script lang="ts">
 import Check from "./Check.svelte";
-import { MEDIA_KINDS, type Rule } from "./types";
+import { type MatchTarget, MEDIA_KINDS, type Rule } from "./types";
 
 let {
     rules = $bindable([]),
@@ -19,8 +19,13 @@ const LABELS: Record<Rule["type"], string> = {
 
 function add(type: Rule["type"]) {
     const blank: Record<Rule["type"], Rule> = {
-        keyword: { type: "keyword", value: "", caseSensitive: false },
-        regex: { type: "regex", pattern: "" },
+        keyword: {
+            type: "keyword",
+            value: "",
+            caseSensitive: false,
+            target: "text"
+        },
+        regex: { type: "regex", pattern: "", target: "text" },
         media: { type: "media", kinds: ["photo"] },
         sender: { type: "sender", ids: [], usernames: [] }
     };
@@ -48,6 +53,24 @@ function toggleKind(rule: Extract<Rule, { type: "media" }>, kind: string) {
 }
 </script>
 
+{#snippet targetPicker(rule: Extract<Rule, { target: MatchTarget }>)}
+    <div style="display:flex; align-items:center; gap:10px; margin-top:10px">
+        <span class="field-label" style="margin:0">Match against</span>
+        <div class="segmented">
+            <button
+                type="button"
+                aria-pressed={rule.target === "text"}
+                onclick={() => (rule.target = "text")}>Text</button
+            >
+            <button
+                type="button"
+                aria-pressed={rule.target === "filename"}
+                onclick={() => (rule.target = "filename")}>File name</button
+            >
+        </div>
+    </div>
+{/snippet}
+
 <h2 class="section-title">{title}</h2>
 <div class="card">
     {#each rules as rule, i (i)}
@@ -69,8 +92,11 @@ function toggleKind(rule: Extract<Rule, { type: "media" }>, kind: string) {
                     class="input"
                     type="text"
                     bind:value={rule.value}
-                    placeholder="Word or phrase"
+                    placeholder={rule.target === "filename"
+                        ? "Part of a file name"
+                        : "Word or phrase"}
                 />
+                {@render targetPicker(rule)}
                 <div style="margin-top:10px">
                     <Check bind:checked={rule.caseSensitive} label="Match case" />
                 </div>
@@ -79,11 +105,14 @@ function toggleKind(rule: Extract<Rule, { type: "media" }>, kind: string) {
                     class="input mono"
                     type="text"
                     bind:value={rule.pattern}
-                    placeholder="t\.me/\w+"
+                    placeholder={rule.target === "filename"
+                        ? "\\.(mkv|avi)$"
+                        : "t\\.me/\\w+"}
                     autocapitalize="off"
                     autocorrect="off"
                     spellcheck="false"
                 />
+                {@render targetPicker(rule)}
                 <p class="note" style="margin-left:0">
                     Lookbehind and backreferences are not supported.
                 </p>
