@@ -1,5 +1,5 @@
 import { BotContext } from "../bot";
-import db from "../database";
+import db from "../store";
 import { getEntity } from "../modules/utils";
 
 export default async function set_owner_handler(ctx: BotContext) {

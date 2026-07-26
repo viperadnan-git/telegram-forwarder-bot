@@ -1,5 +1,5 @@
 import { BotContext } from "../bot";
-import db from "../database";
+import db from "../store";
 
 export default async function rem_chat_handler(ctx: BotContext) {
     const match = ctx.match as string;

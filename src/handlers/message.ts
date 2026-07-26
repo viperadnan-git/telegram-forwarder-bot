@@ -1,5 +1,5 @@
 import { BotContext } from "../bot";
-import db from "../database";
+import db from "../store";
 import logger from "../modules/logger";
 import { BOT_NAME_IGNORE_CAPTION_CHAR, BOT_NAME_PROTECT_CONTENT_CHAR } from "../constants";
 
@@ -7,9 +7,11 @@ export default async function message_handler(ctx: BotContext) {
     const message = ctx.message ?? ctx.channelPost;
     const fromChatId = message?.chat.id as number;
     const me = ctx.me;
-    const chatIds = await db.getChatMap(me.id, fromChatId);
+    const chatIds = (await db.getRoutes(me.id, fromChatId)).map(
+        (r) => r.destChatId
+    );
 
-    if (!chatIds?.length) return;
+    if (!chatIds.length) return;
 
     logger.info(
         `Incoming message: ${fromChatId}:${

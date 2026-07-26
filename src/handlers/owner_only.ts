@@ -1,5 +1,5 @@
 import { BotContext } from "../bot";
-import db from "../database";
+import db from "../store";
 
 export default async function owner_only(ctx: BotContext) {
     const owner = await db.getOwner(ctx.me.id);

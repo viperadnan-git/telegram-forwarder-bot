@@ -1,5 +1,5 @@
 import { BotContext } from "../bot";
-import db from "../database";
+import db from "../store";
 import { formatObject } from "../modules/utils";
 
 export default async function get_chat_handler(ctx: BotContext) {
@@ -14,8 +14,10 @@ export default async function get_chat_handler(ctx: BotContext) {
             `<b>Chats configured for forwarding</b>\n\n${formatObject(chatMap)}`
         );
     } else {
-        const chatIds = await db.getChatMap(ctx.me.id, parseInt(match));
-        if (!chatIds?.length) {
+        const chatIds = (
+            await db.getRoutes(ctx.me.id, parseInt(match))
+        ).map((r) => r.destChatId);
+        if (!chatIds.length) {
             await ctx.reply(
                 `No chats configured for id (<code>${match}</code>).`
             );
