@@ -61,6 +61,10 @@ async function authenticate(req: Request, res: Response, next: NextFunction) {
     next();
 }
 
+/** Express 5 types params as string | string[]; ours are always single. */
+export const param = (value: string | string[] | undefined): string =>
+    Array.isArray(value) ? (value[0] ?? "") : (value ?? "");
+
 const asHandler =
     (fn: (req: AuthedRequest, res: Response) => Promise<void>) =>
     (req: Request, res: Response, next: NextFunction) =>
@@ -238,7 +242,11 @@ export function createApiRouter(): Router {
                 return;
             }
 
-            const route = await db.updateRoute(req.botId, req.params.id, patch);
+            const route = await db.updateRoute(
+                req.botId,
+                param(req.params.id),
+                patch
+            );
             if (!route) {
                 res.status(404).json({ error: "route not found" });
                 return;
@@ -250,7 +258,10 @@ export function createApiRouter(): Router {
     router.delete(
         "/routes/:id",
         asHandler(async (req, res) => {
-            const deleted = await db.deleteRoute(req.botId, req.params.id);
+            const deleted = await db.deleteRoute(
+                req.botId,
+                param(req.params.id)
+            );
             res.status(deleted ? 204 : 404).end();
         })
     );

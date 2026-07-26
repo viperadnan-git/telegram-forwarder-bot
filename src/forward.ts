@@ -26,11 +26,13 @@ const contentOf = (msg: Message): TextAndEntities => ({
 const primaryOf = (parts: Message[]) =>
     parts.find((p) => p.caption ?? p.text) ?? parts[0];
 
-type GroupMedia =
-    | InputMediaPhoto
-    | InputMediaVideo
-    | InputMediaAudio
-    | InputMediaDocument;
+type VisualMedia = InputMediaPhoto | InputMediaVideo;
+type GroupMedia = VisualMedia | InputMediaAudio | InputMediaDocument;
+
+// Telegram accepts a group of photos/videos, of audio, or of documents —
+// never a mix. grammY's types encode this, so the array has to be narrowed.
+const family = (m: GroupMedia) =>
+    m.type === "audio" || m.type === "document" ? m.type : "visual";
 
 function toInputMedia(
     msg: Message,
@@ -162,18 +164,36 @@ async function deliverAlbum(
         );
     });
 
-    if (media.some((m) => m === undefined)) {
+    const kinds = new Set(
+        media.filter((m) => m !== undefined).map((m) => family(m))
+    );
+
+    if (media.some((m) => m === undefined) || kinds.size > 1) {
+        // Unsupported media, or a mix Telegram would reject.
         // ponytail: loses grouping, keeps config.
-        logger.debug(
-            "Album has unsupported media, falling back to per-message"
-        );
+        logger.debug("Album cannot be sent as one group, falling back");
         for (const part of parts) {
             await deliverSingle(api, config, destChatId, sourceChatId, part);
         }
         return;
     }
 
-    await api.sendMediaGroup(destChatId, media as GroupMedia[], common);
+    const group = media as GroupMedia[];
+    if (kinds.has("audio")) {
+        await api.sendMediaGroup(
+            destChatId,
+            group as InputMediaAudio[],
+            common
+        );
+    } else if (kinds.has("document")) {
+        await api.sendMediaGroup(
+            destChatId,
+            group as InputMediaDocument[],
+            common
+        );
+    } else {
+        await api.sendMediaGroup(destChatId, group as VisualMedia[], common);
+    }
 }
 
 /** One message, or one album, to one destination. */

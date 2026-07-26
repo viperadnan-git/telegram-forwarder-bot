@@ -310,3 +310,36 @@ describe("removeButtons", () => {
         expect(calls[0].args[2].reply_markup).toBeUndefined();
     });
 });
+
+describe("media group families", () => {
+    const audioPart = (id: number, caption?: string): Message =>
+        ({
+            message_id: id,
+            date: 0,
+            chat: { id: SRC, type: "channel", title: "s" },
+            media_group_id: "g1",
+            audio: { file_id: `A${id}`, duration: 1 },
+            caption
+        }) as Message;
+
+    test("an all-audio group is still sent as one group", async () => {
+        const { api, calls } = stubApi();
+        await deliver(api, route({ caption: { append: "!" } }), SRC, [
+            audioPart(1, "cap"),
+            audioPart(2)
+        ]);
+        expect(calls[0].method).toBe("sendMediaGroup");
+        expect(calls[0].args[1][0]).toMatchObject({ type: "audio" });
+    });
+
+    test("mixing audio with photos falls back to per-message", async () => {
+        const { api, calls } = stubApi();
+        // Telegram rejects a group mixing audio with photos.
+        await deliver(api, route({ caption: { append: "!" } }), SRC, [
+            albumPart(1, "cap"),
+            audioPart(2)
+        ]);
+        expect(calls.every((c) => c.method === "copyMessage")).toBe(true);
+        expect(calls).toHaveLength(2);
+    });
+});
