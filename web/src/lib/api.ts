@@ -78,5 +78,12 @@ export const updateRoute = (
         body: JSON.stringify(patch)
     }).then((r) => r.route);
 
+/** Numeric user id only: Telegram cannot resolve a person by @username. */
+export const handOver = (input: string) =>
+    request<{ ownerId: number }>("/owner", {
+        method: "POST",
+        body: JSON.stringify({ input })
+    }).then((r) => r.ownerId);
+
 export const deleteRoute = (id: string) =>
     request<void>(`/routes/${id}`, { method: "DELETE" });

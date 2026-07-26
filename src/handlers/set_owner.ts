@@ -1,5 +1,5 @@
 import type { BotContext } from "../bot";
-import { resolveChat } from "../modules/utils";
+import { resolveUser } from "../modules/utils";
 import db from "../store";
 
 export default async function set_owner_handler(ctx: BotContext) {
@@ -11,13 +11,10 @@ export default async function set_owner_handler(ctx: BotContext) {
     }
 
     if (ctx.match) {
-        const resolved = await resolveChat(ctx.api, ctx.match as string);
+        const resolved = await resolveUser(ctx.api, ctx.match as string);
 
         if (!resolved.ok) {
-            await ctx.reply(
-                `Could not find that user: ${resolved.error}\n` +
-                    "They need to have messaged me first."
-            );
+            await ctx.reply(resolved.error);
             return;
         }
 

@@ -5,15 +5,18 @@ import ChatInput from "./lib/ChatInput.svelte";
 import ChatLabel from "./lib/ChatLabel.svelte";
 import Help from "./lib/Help.svelte";
 import NoAccess from "./lib/NoAccess.svelte";
+import Owner from "./lib/Owner.svelte";
 import RouteEditor from "./lib/RouteEditor.svelte";
+import { currentView, navigate, type View } from "./lib/router";
 import Skeleton from "./lib/Skeleton.svelte";
-import { botId, close, confirm, init, page } from "./lib/telegram";
+import { botId, close, confirm, init } from "./lib/telegram";
 import { type Route, type RouteConfig, withDefaults } from "./lib/types";
 
 let routes = $state<Route[]>([]);
 let loading = $state(true);
 let error = $state("");
-let denied = $state<"unclaimed" | "not_owner" | null>(null);
+const initialView = currentView();
+let view = $state<View>(initialView);
 let editing = $state<Route | null>(null);
 let refreshing = $state(false);
 let refreshNote = $state("");
@@ -126,14 +129,32 @@ function chips(route: Route): string[] {
 const plural = (n: number, one: string, many = `${one}s`) =>
     `${n} ${n === 1 ? one : many}`;
 
+const NO_BOT =
+    "Open this page from your bot so it knows which bot to configure.";
+
+let loaded = false;
+
+/** Routes are fetched once, whichever screen the app happened to open on. */
+function goto(next: View) {
+    view = next;
+    error = "";
+    navigate(next);
+    if (next !== "settings" || loaded) return;
+    if (botId()) load();
+    else error = NO_BOT;
+}
+
 async function load() {
     loading = true;
     error = "";
     try {
         routes = await api.listRoutes();
+        loaded = true;
     } catch (e: any) {
         if (e instanceof ApiError && e.status === 403) {
-            denied = e.reason === "unclaimed" ? "unclaimed" : "not_owner";
+            // The URL should say which screen you are on.
+            view = e.reason === "unclaimed" ? "unclaimed" : "not-owner";
+            navigate(view);
         } else {
             error = e.message;
         }
@@ -156,69 +177,73 @@ async function remove() {
     editing = null;
 }
 
-const showHelp = page() === "help";
-
-if (showHelp) {
+if (initialView !== "settings") {
     loading = false;
 } else if (botId()) {
     load();
 } else {
     loading = false;
-    error = "Open this page from your bot so it knows which bot to configure.";
+    error = NO_BOT;
 }
 </script>
 
+{#snippet actionRow(label: string, sub: string, action: () => void)}
+    <button type="button" class="row" onclick={action}>
+        <span class="grow">
+            <span class="row-label">{label}</span>
+            <span class="sub">{sub}</span>
+        </span>
+        <span class="chevron" aria-hidden="true">›</span>
+    </button>
+{/snippet}
+
 {#snippet addSection()}
-    <div style="margin-top:14px">
-        <button type="button" class="btn" disabled={starting} onclick={startSetFlow}>
-            {starting ? "Opening picker…" : "Add forwarding"}
-        </button>
-    </div>
-    <p class="note">
-        Telegram shows the chat picker in your chat with the bot, so this window
-        closes when you tap it.
-    </p>
+    <h2 class="section-title">Add forwarding</h2>
 
     {#if manual}
-        <div class="card" style="margin-top:14px">
+        <div class="card">
             <ChatInput bind:this={sourceInput} bind:chatId={newSource} label="Source" />
             <ChatInput bind:this={destInput} bind:chatId={newDest} label="Destination" />
         </div>
-        <div style="margin-top:10px">
+        <div class="actions-stack">
             <button
                 type="button"
                 class="btn"
                 disabled={!canAdd || adding}
                 onclick={addManually}
             >
-                {adding ? "Adding…" : "Add route"}
+                {adding ? "Adding…" : "Add forwarding"}
             </button>
-        </div>
-        <div style="margin-top:8px">
             <button type="button" class="btn secondary" onclick={cancelManual}>
                 Cancel
             </button>
         </div>
-        <p class="note">
-            I must already be in both chats — an administrator, if it is a channel.
-        </p>
     {:else}
-        <div style="margin-top:10px">
-            <button type="button" class="btn secondary" onclick={() => (manual = true)}>
-                Add forwarding (manual)
-            </button>
+        <div class="card">
+            {@render actionRow(
+                starting ? "Opening picker…" : "Pick from a list",
+                "Opens in your chat with the bot, so this window closes",
+                startSetFlow
+            )}
+            {@render actionRow(
+                "Enter chats yourself",
+                "Chat id, @username or t.me link",
+                () => (manual = true)
+            )}
         </div>
-        <p class="note">
-            Enter chats yourself with a chat id, @username or t.me link. Use this for
-            chats the picker does not list — but I still have to be in both.
-        </p>
     {/if}
+
+    <p class="note">
+        I must already be in both chats — an administrator, if it is a channel.
+    </p>
 {/snippet}
 
-{#if showHelp}
-    <Help />
-{:else if denied}
-    <NoAccess reason={denied} />
+{#if view === "help"}
+    <Help onback={() => goto("settings")} />
+{:else if view === "owner"}
+    <Owner onback={() => goto("settings")} />
+{:else if view === "not-owner" || view === "unclaimed"}
+    <NoAccess reason={view} onhelp={() => goto("help")} />
 {:else}
 <div class="page">
     <header class="masthead">
@@ -258,12 +283,13 @@ if (showHelp) {
     </header>
 
     {#if error}<p class="banner">{error}</p>{/if}
+    {#if refreshNote}<p class="note refresh-note">{refreshNote}</p>{/if}
 
     {#if loading}
         <Skeleton />
     {:else if routes.length === 0}
         <div class="empty">
-            <strong>No routes yet</strong>
+            <strong>Nothing forwarding yet</strong>
             <p>Pick a chat to forward from, and one to forward to.</p>
         </div>
 
@@ -319,7 +345,15 @@ if (showHelp) {
 
     {@render addSection()}
 
-    {#if refreshNote}<p class="note">{refreshNote}</p>{/if}
+    <h2 class="section-title">This bot</h2>
+    <div class="card">
+        {@render actionRow("How it works", "Setup, commands and questions", () =>
+            goto("help")
+        )}
+        {@render actionRow("Owner", "Hand the bot to someone else", () =>
+            goto("owner")
+        )}
+    </div>
 </div>
 {/if}
 

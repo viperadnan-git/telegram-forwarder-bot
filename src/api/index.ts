@@ -8,7 +8,7 @@ import { getBotById } from "../bot";
 import { validateConfig } from "../config";
 import { sourceKeyboard } from "../handlers/pick";
 import logger from "../modules/logger";
-import { resolveChat } from "../modules/utils";
+import { resolveChat, resolveUser } from "../modules/utils";
 import db from "../store";
 import { verifyInitData } from "./auth";
 
@@ -81,6 +81,36 @@ export function createApiRouter(): Router {
         "/routes",
         asHandler(async (req, res) => {
             res.json({ routes: await db.listRoutes(req.botId) });
+        })
+    );
+
+    // One-way from here: only the new owner can hand it back.
+    router.post(
+        "/owner",
+        asHandler(async (req, res) => {
+            const bot = getBotById(req.botId);
+            if (!bot) {
+                res.status(503).json({
+                    error: "Send a message to the bot, then try again."
+                });
+                return;
+            }
+
+            const result = await resolveUser(
+                bot.api,
+                String(req.body?.input ?? "")
+            );
+            if (!result.ok) {
+                res.status(400).json({ error: result.error });
+                return;
+            }
+            if (result.chat.id === req.userId) {
+                res.status(400).json({ error: "You already own this bot" });
+                return;
+            }
+
+            await db.setOwner(req.botId, result.chat.id);
+            res.json({ ownerId: result.chat.id });
         })
     );
 
@@ -214,7 +244,7 @@ export function createApiRouter(): Router {
                 destChatId
             );
             if (!route) {
-                res.status(409).json({ error: "That route already exists" });
+                res.status(409).json({ error: "That forward already exists" });
                 return;
             }
             res.status(201).json({ route });
@@ -238,7 +268,7 @@ export function createApiRouter(): Router {
                 patch.enabled = req.body.enabled;
             }
             if (Object.keys(patch).length === 0) {
-                res.status(400).json({ error: "nothing to update" });
+                res.status(400).json({ error: "Nothing to update" });
                 return;
             }
 
@@ -248,7 +278,9 @@ export function createApiRouter(): Router {
                 patch
             );
             if (!route) {
-                res.status(404).json({ error: "route not found" });
+                res.status(404).json({
+                    error: "That forward no longer exists"
+                });
                 return;
             }
             res.json({ route });

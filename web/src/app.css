@@ -410,6 +410,32 @@ button.chip {
     font-variant-numeric: tabular-nums;
 }
 
+/* A URL has no spaces to wrap on, and must not widen the page. */
+.sub.url {
+    font-family: var(--mono);
+    word-break: break-all;
+    margin-top: 3px;
+}
+
+/* Explanatory copy inside a card, as opposed to a labelled field. */
+.prose {
+    margin: 0;
+    font-size: 15px;
+    line-height: 1.5;
+}
+
+/* Buttons that follow a card, as one block rather than scattered margins. */
+.actions-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.refresh-note {
+    margin: 0 2px 14px;
+}
+
 /* --- form controls ------------------------------------------------------ */
 
 .field > label,

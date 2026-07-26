@@ -2,6 +2,7 @@ import { autoRetry } from "@grammyjs/auto-retry";
 import { type ParseModeFlavor, parseMode } from "@grammyjs/parse-mode";
 import { Bot, Composer, type Context } from "grammy";
 import bot_token_handler from "./handlers/bot_token";
+import cancel_handler from "./handlers/cancel";
 import get_chat_handler from "./handlers/get_chat";
 import help_handler from "./handlers/help";
 import message_handler from "./handlers/message";
@@ -10,6 +11,7 @@ import chat_shared_handler from "./handlers/pick";
 import rem_chat_handler from "./handlers/rem_chat";
 import set_chat_handler from "./handlers/set_chat";
 import set_owner_handler from "./handlers/set_owner";
+import settings_handler from "./handlers/settings";
 import start_handler from "./handlers/start";
 import logger from "./modules/logger";
 
@@ -33,27 +35,35 @@ export const botCreator = (token: string) => {
         .setMyCommands([
             {
                 command: "start",
-                description: "Start the bot"
+                description: "What this bot does"
             },
             {
                 command: "help",
-                description: "Show help message"
+                description: "How it works, and the commands"
             },
             {
                 command: "set",
-                description: "Add forwarding — pick chats from a list"
+                description: "Forward a chat to another"
             },
             {
                 command: "get",
-                description: "Get a existing setting"
+                description: "List what is being forwarded"
             },
             {
                 command: "rem",
-                description: "Remove a chat forwarding"
+                description: "Stop forwarding a chat"
+            },
+            {
+                command: "settings",
+                description: "Change how a chat is forwarded"
+            },
+            {
+                command: "cancel",
+                description: "Stop what you started"
             },
             {
                 command: "set_owner",
-                description: "Set the owner of the bot"
+                description: "Hand the bot to someone else"
             }
             // A revoked token rejects here; unhandled it kills the process.
         ])
@@ -90,10 +100,10 @@ export const getBotById = (botId: number) => {
 };
 
 /** The bot id is verified against the initData signature, so it is safe in the URL. */
-export const miniAppUrl = (botId: number, page?: string) =>
-    WEBHOOK_HOST
-        ? `${WEBHOOK_HOST}/app?bot=${botId}${page ? `&page=${page}` : ""}`
-        : undefined;
+export const miniAppUrl = (
+    botId: number,
+    view: "settings" | "help" = "settings"
+) => (WEBHOOK_HOST ? `${WEBHOOK_HOST}/app/${view}?bot=${botId}` : undefined);
 
 const wrapper =
     (handler: (ctx: BotContext) => Promise<void>) =>
@@ -108,7 +118,9 @@ const privateChat = composer.chatType("private");
 
 privateChat.command("start", wrapper(start_handler));
 privateChat.command(["set_owner", "setowner"], wrapper(set_owner_handler));
-privateChat.command(["help", "settings"], wrapper(help_handler));
+privateChat.command("help", wrapper(help_handler));
+privateChat.command("settings", wrapper(settings_handler));
+privateChat.command("cancel", wrapper(cancel_handler));
 
 privateChat.command("set").filter(owner_only, wrapper(set_chat_handler));
 privateChat.command("get").filter(owner_only, wrapper(get_chat_handler));

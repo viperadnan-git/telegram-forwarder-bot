@@ -134,10 +134,17 @@ function toggleKind(rule: Extract<Rule, { type: "media" }>, kind: string) {
                     type="text"
                     value={senderText(rule)}
                     oninput={(e) => setSender(rule, e.currentTarget.value)}
-                    placeholder="User ids or @usernames, comma separated"
+                    placeholder="Ids or @usernames, comma separated"
                     autocapitalize="off"
                     spellcheck="false"
                 />
+            {/if}
+
+            {#if rule.type === "sender"}
+                <p class="note" style="margin-left:0">
+                    Matches the author, the channel a post was sent as, and — for a
+                    forwarded message — who it originally came from.
+                </p>
             {/if}
         </div>
     {/each}

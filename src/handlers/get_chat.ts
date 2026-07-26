@@ -16,9 +16,7 @@ export default async function get_chat_handler(ctx: BotContext) {
     if (!match) {
         const chatMap = await db.getAllChatMap(ctx.me.id);
         if (!Object.keys(chatMap).length) {
-            await ctx.reply(
-                "Nothing forwarding yet. Send /set to add a route."
-            );
+            await ctx.reply("Nothing forwarding yet. Send /set to add one.");
             return;
         }
         await ctx.reply(

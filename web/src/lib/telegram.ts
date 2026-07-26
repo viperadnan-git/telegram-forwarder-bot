@@ -1,9 +1,12 @@
 /** Only the parts of the WebApp object this app uses. */
 type WebApp = {
     initData: string;
+    initDataUnsafe?: { user?: { id: number } };
     ready(): void;
     expand(): void;
     close(): void;
+    isExpanded?: boolean;
+    disableVerticalSwipes?(): void;
     openTelegramLink?(url: string): void;
     HapticFeedback?: {
         notificationOccurred(t: "error" | "success" | "warning"): void;
@@ -25,13 +28,15 @@ export function botId(): number {
     return Number(fromQuery ?? fromStart ?? 0);
 }
 
-/** Which screen to show. Static pages need no bot id and no auth. */
-export const page = (): string =>
-    new URLSearchParams(location.search).get("page") ?? "";
+/** Display only — unsigned. Anything that matters is checked server-side. */
+export const myId = (): number | undefined => webApp?.initDataUnsafe?.user?.id;
 
 export function init() {
-    webApp?.ready();
-    webApp?.expand();
+    if (!webApp) return;
+    webApp.ready();
+    webApp.expand();
+    // A long settings list would otherwise collapse the app while scrolling.
+    webApp.disableVerticalSwipes?.();
 }
 
 export const close = () => webApp?.close();

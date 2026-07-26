@@ -24,7 +24,8 @@ const REQUEST = {
 
 const PENDING_TTL_MS = 10 * 60 * 1000;
 
-type Pending = { chatId: number; name: string; at: number };
+// chatId is null between /set and the first pick, so /cancel can see the flow.
+type Pending = { chatId: number | null; name: string; at: number };
 const pending = new Map<string, Pending>();
 
 const key = (botId: number, userId: number) => `${botId}:${userId}`;
@@ -116,11 +117,21 @@ export const sourceKeyboard = () =>
 export const destinationKeyboard = () =>
     keyboard(REQUEST.DEST_CHANNEL, REQUEST.DEST_GROUP, "destination");
 
+/** Drops a half-finished pick. Returns false if there was nothing to drop. */
+export function cancelPicker(botId: number, userId: number): boolean {
+    return pending.delete(key(botId, userId));
+}
+
 export async function startPicker(ctx: BotContext) {
-    pending.delete(key(ctx.me.id, ctx.from?.id ?? 0));
+    pending.set(key(ctx.me.id, ctx.from?.id ?? 0), {
+        chatId: null,
+        name: "",
+        at: Date.now()
+    });
     await ctx.reply(
         "<b>Step 1 of 2</b> — the chat to forward <b>from</b>.\n\n" +
-            "<i>Only channels I administer and groups I am in.</i>",
+            "<i>Channels need both of us to be administrators. Groups just need me in " +
+            "them. /cancel to stop.</i>",
         { reply_markup: sourceKeyboard() }
     );
 }
@@ -183,7 +194,7 @@ export default async function chat_shared_handler(ctx: BotContext) {
     }
 
     const source = takePending(ctx.me.id, userId);
-    if (!source) {
+    if (!source || source.chatId === null) {
         await ctx.reply("That took too long. Send /set to start again.", {
             reply_markup: { remove_keyboard: true }
         });

@@ -48,7 +48,9 @@ export default async function bot_token_handler(ctx: BotContext) {
             }
         } else {
             await db.setOwner(parseInt(bot_token.split(":")[0], 10), senderId);
-            await ctx.reply("That bot is already set up, and it is yours.");
+            await ctx.reply(
+                "That bot is already running, and it is yours again."
+            );
         }
     } else {
         await ctx.reply(
