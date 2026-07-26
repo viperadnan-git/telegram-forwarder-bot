@@ -8,10 +8,11 @@ addColors({
 });
 
 const logger = createLogger({
+    // Parenthesised: `a || b ? x : y` parses as `(a || b) ? x : y`, which made
+    // any truthy LOG_LEVEL force "info".
     level:
-        process.env.LOG_LEVEL || process.env.NODE_ENV === "production"
-            ? "info"
-            : "debug",
+        process.env.LOG_LEVEL ||
+        (process.env.NODE_ENV === "production" ? "info" : "debug"),
     format: format.combine(
         format.timestamp({
             format: "DD-MM-YYYY HH:mm:ss"

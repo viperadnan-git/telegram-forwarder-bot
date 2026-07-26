@@ -1,11 +1,15 @@
 import { Redis } from "ioredis";
 import logger from "./modules/logger";
 
-const PREFIX = "fwdbot:v2";
+// Not the legacy `fwdbot:` root: it is scanned with patterns like
+// `fwdbot:*:owner`, which a cache key must never match.
+const PREFIX = "tgfwd:cache";
 const INVALIDATE_CHANNEL = `${PREFIX}:invalidate`;
 const SEP = "|";
 
-const DEFAULT_TTL_MS = (Number(process.env.CACHE_TTL_SECONDS) || 60) * 1000;
+// Backstop only: every write invalidates explicitly. Bounds staleness from
+// direct SQL, or instances not sharing a Redis.
+const DEFAULT_TTL_MS = (Number(process.env.CACHE_TTL_SECONDS) || 3600) * 1000;
 const DEFAULT_MAX_ENTRIES = Number(process.env.CACHE_MAX_ENTRIES) || 10_000;
 
 const REDIS_URI = process.env.REDIS_URI;
@@ -14,24 +18,33 @@ type Entry<T> = { value: T; expiresAt: number };
 
 const registry = new Map<string, Cache<any>>();
 
-function createRedis(uri: string, role: string) {
+function createRedis(uri: string, role: string, commandTimeout?: number) {
     const client = new Redis(uri, {
         keepAlive: 30_000,
-        maxRetriesPerRequest: 2,
-        enableOfflineQueue: false
+        maxRetriesPerRequest: 1,
+        // Off would fail every command before "ready", killing L2 at startup
+        // and after each reconnect.
+        enableOfflineQueue: true,
+        connectTimeout: 5_000,
+        ...(commandTimeout ? { commandTimeout } : {})
     });
     client.on("ready", () => logger.info(`Redis ${role} ready`));
     client.on("error", (err) => logger.warn(`Redis ${role}: ${err.message}`));
     return client;
 }
 
-/** Command connection. A subscriber connection cannot issue normal commands. */
-const redis = REDIS_URI ? createRedis(REDIS_URI, "cache") : undefined;
+// Separate from the subscriber, which cannot issue normal commands. The
+// timeout keeps a slow Redis off the forwarding path.
+const redis = REDIS_URI ? createRedis(REDIS_URI, "cache", 500) : undefined;
 
 if (REDIS_URI) {
+    // No command timeout: it would kill SUBSCRIBE before the connection is ready.
     const subscriber = createRedis(REDIS_URI, "subscriber");
-    subscriber.subscribe(INVALIDATE_CHANNEL).catch((err) => {
-        logger.error(`Redis subscribe failed: ${err.message}`);
+
+    subscriber.on("ready", () => {
+        subscriber.subscribe(INVALIDATE_CHANNEL).catch((err) => {
+            logger.error(`Redis subscribe failed: ${err.message}`);
+        });
     });
     subscriber.on("message", (_channel, payload) => {
         const i = payload.indexOf(SEP);
@@ -59,14 +72,14 @@ export class Cache<T> {
         return `${PREFIX}:${this.namespace}:${key}`;
     }
 
-    /** Drop from this process only. Used by the pub/sub invalidation listener. */
+    /** This process only; the pub/sub listener calls it on other instances. */
     dropLocal(key: string) {
         this.l1.delete(key);
     }
 
     private setL1(key: string, value: T) {
-        // ponytail: wholesale clear instead of LRU eviction. Rare at 10k entries;
-        // swap in a real LRU if the post-clear refill burst ever shows up.
+        // ponytail: wholesale clear, not LRU. Swap in an LRU if the refill
+        // burst after a clear ever matters.
         if (this.l1.size >= this.maxEntries) this.l1.clear();
         this.l1.set(key, { value, expiresAt: Date.now() + this.ttlMs });
     }

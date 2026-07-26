@@ -1,47 +1,51 @@
 import { BotContext } from "../bot";
 import db from "../store";
-import { getEntity } from "../modules/utils";
+import { resolveChat } from "../modules/utils";
+import { startPicker } from "./pick";
 
 export default async function set_chat_handler(ctx: BotContext) {
-    const match = ctx.match as string;
+    const match = (ctx.match as string)?.trim();
+
+    // No arguments: use the native chat picker.
     if (!match) {
+        await startPicker(ctx);
+        return;
+    }
+
+    const [from, to] = match.split(/\s+/, 2);
+
+    if (!from || !to) {
         await ctx.reply(
-            "Please specify a from chat id and to chat id.\n\nTo forward from 'from_chat_id to 'to_chat_id' chat\n<pre>/set (from chat_id) (to chat_id)</pre>"
+            "Two chats are needed.\n<pre>/set (source) (destination)</pre>\n" +
+                "Each can be a chat id, an @username, or a t.me link.\n\n" +
+                "Or send /set on its own to pick them from a list."
         );
         return;
     }
 
-    const botId = ctx.me.id;
-    const [chatId, toChatId] = match.split(" ", 2);
-
-    if (!chatId || !toChatId) {
-        await ctx.reply(
-            "Could not get chat IDs. Chat IDs must be numbers.\nCorrect usage:\n<pre>/set (from chat_id) (to chat_id)</pre>"
-        );
+    const source = await resolveChat(ctx.api, from);
+    if (!source.ok) {
+        await ctx.reply(`Could not use <code>${from}</code>: ${source.error}`);
         return;
     }
 
-    const chadIdEntity = await getEntity(ctx, chatId);
-
-    if (!chadIdEntity) {
-        await ctx.reply(
-            `Could not get chat entity for chat ID: <code>${chatId}</code>\nMake sure the chat ID is correct and I am in the chat with read access.`
-        );
+    const dest = await resolveChat(ctx.api, to);
+    if (!dest.ok) {
+        await ctx.reply(`Could not use <code>${to}</code>: ${dest.error}`);
         return;
     }
 
-    const toChatIdEntity = await getEntity(ctx, toChatId);
-
-    if (!toChatIdEntity) {
-        await ctx.reply(
-            `Could not get chat entity for chat ID: <code>${toChatId}</code>\nMake sure the chat ID is correct and I am in the chat with read access.`
-        );
-        return;
+    await db.setChatMap(ctx.me.id, source.chat.id, dest.chat.id);
+    for (const c of [source.chat, dest.chat]) {
+        await db.saveChat({
+            chatId: c.id,
+            title: "title" in c ? c.title : undefined,
+            username: "username" in c ? c.username : undefined,
+            type: c.type
+        });
     }
-
-    await db.setChatMap(botId, chadIdEntity.id, toChatIdEntity.id);
 
     await ctx.reply(
-        `Forwarding is enabled for new messages in chat.\n<pre>${chadIdEntity.id} -> ${toChatIdEntity.id}</pre>`
+        `Forwarding new messages.\n<pre>${source.chat.id} -> ${dest.chat.id}</pre>`
     );
 }

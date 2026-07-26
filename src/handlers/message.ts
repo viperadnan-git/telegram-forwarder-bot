@@ -1,48 +1,48 @@
+import { AlbumBuffer, isAlbumPart } from "../albums";
+
+import type { Api } from "grammy";
 import { BotContext } from "../bot";
+import type { Message } from "grammy/types";
+import { backfillBotNameFlags } from "../legacy";
 import db from "../store";
+import { fanOut } from "../forward";
 import logger from "../modules/logger";
-import { BOT_NAME_IGNORE_CAPTION_CHAR, BOT_NAME_PROTECT_CONTENT_CHAR } from "../constants";
 
-export default async function message_handler(ctx: BotContext) {
-    const message = ctx.message ?? ctx.channelPost;
-    const fromChatId = message?.chat.id as number;
-    const me = ctx.me;
-    const chatIds = (await db.getRoutes(me.id, fromChatId)).map(
-        (r) => r.destChatId
-    );
-
-    if (!chatIds.length) return;
+async function dispatch(api: Api, botId: number, parts: Message[]) {
+    const sourceChatId = parts[0].chat.id;
+    const routes = await db.getRoutes(botId, sourceChatId);
+    if (!routes.length) {
+        // Distinguishes "no route" from "no update arrived" in the log.
+        logger.debug(`No routes for ${sourceChatId}, ignoring`);
+        return;
+    }
 
     logger.info(
-        `Incoming message: ${fromChatId}:${
-            message?.message_id
-        } -> ${chatIds.join(",")}`
+        `Incoming ${parts.length > 1 ? `album x${parts.length}` : "message"}: ` +
+            `${sourceChatId}:${parts[0].message_id} -> ` +
+            routes.map((r) => r.destChatId).join(",")
     );
 
-    const other = {
-        reply_markup: message?.reply_markup,
-        protect_content: me.first_name.includes(BOT_NAME_PROTECT_CONTENT_CHAR),
-        ...(me.first_name.includes(BOT_NAME_IGNORE_CAPTION_CHAR)
-            ? { caption: message?.caption ? "" : undefined }
-            : {})
-    };
+    await fanOut(api, routes, sourceChatId, parts);
+}
 
-    for (const chatId of chatIds) {
-        try {
-            await ctx.api.copyMessage(
-                chatId,
-                fromChatId,
-                message?.message_id as number,
-                other
-            );
-        } catch (error: any) {
-            logger.warn(
-                `Error when forwarding message (${
-                    message?.message_id
-                }) from ${fromChatId} to ${chatId}: ${
-                    error.description || error.message
-                }`
-            );
-        }
+// Shared by every bot here; the buffer key includes the bot id.
+const albums = new AlbumBuffer<Api>((botId, parts, api) => {
+    dispatch(api, botId, parts).catch((err) =>
+        logger.error(`Album dispatch failed: ${err.message}`)
+    );
+});
+
+export default async function message_handler(ctx: BotContext) {
+    const message = (ctx.message ?? ctx.channelPost) as Message | undefined;
+    if (!message) return;
+
+    backfillBotNameFlags(ctx.me.id, ctx.me.first_name);
+
+    if (isAlbumPart(message)) {
+        albums.add(ctx.me.id, message, ctx.api);
+        return;
     }
+
+    await dispatch(ctx.api, ctx.me.id, [message]);
 }

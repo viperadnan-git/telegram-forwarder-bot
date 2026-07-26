@@ -1,32 +1,42 @@
 import { BotContext } from "../bot";
 import db from "../store";
 import { formatObject } from "../modules/utils";
+import { resolveChat } from "../modules/utils";
 
 export default async function get_chat_handler(ctx: BotContext) {
-    const match = ctx.match as string;
+    const match = (ctx.match as string)?.trim();
+
     if (!match) {
         const chatMap = await db.getAllChatMap(ctx.me.id);
         if (!Object.keys(chatMap).length) {
-            await ctx.reply(`No chats configured for forwarding.`);
+            await ctx.reply("No forwarding set up yet.");
             return;
         }
         await ctx.reply(
-            `<b>Chats configured for forwarding</b>\n\n${formatObject(chatMap)}`
+            `<b>Sources and their destinations</b>\n\n${formatObject(chatMap)}`
         );
-    } else {
-        const chatIds = (
-            await db.getRoutes(ctx.me.id, parseInt(match))
-        ).map((r) => r.destChatId);
-        if (!chatIds.length) {
-            await ctx.reply(
-                `No chats configured for id (<code>${match}</code>).`
-            );
-            return;
-        }
-        await ctx.reply(
-            `Chats configured for id (<code>${match}</code>):\n\n<b>From</b>\n<pre>${match}</pre>\n\n<b>To</b>\n<pre>${chatIds.join(
-                "\n"
-            )}</pre>`
-        );
+        return;
     }
+
+    const source = await resolveChat(ctx.api, match);
+    if (!source.ok) {
+        await ctx.reply(`Could not use <code>${match}</code>: ${source.error}`);
+        return;
+    }
+
+    const destinations = (await db.getRoutes(ctx.me.id, source.chat.id)).map(
+        (r) => r.destChatId
+    );
+
+    if (!destinations.length) {
+        await ctx.reply(
+            `No destinations for source <code>${source.chat.id}</code>.`
+        );
+        return;
+    }
+
+    await ctx.reply(
+        `<b>Source</b>\n<pre>${source.chat.id}</pre>\n\n` +
+            `<b>Destinations</b>\n<pre>${destinations.join("\n")}</pre>`
+    );
 }

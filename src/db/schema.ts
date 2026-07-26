@@ -4,6 +4,7 @@ import {
     index,
     jsonb,
     pgTable,
+    text,
     timestamp,
     unique,
     uuid
@@ -12,14 +13,29 @@ import {
 import { sql } from "drizzle-orm";
 import { v7 as uuidv7 } from "uuid";
 
-/** Per-destination forwarding options. Populated in phase 2; empty for now. */
+/** Per-destination options; shape lives in config.ts. */
 export type RouteConfig = Record<string, unknown>;
 
+// NOT NULL, so a row always renders as something until a refresh fills it in.
+export const UNNAMED_CHAT = "Unnamed chat";
+export const UNKNOWN_USERNAME = "unknown";
+
 export const bots = pgTable("bots", {
-    // Bot tokens are deliberately not stored. See the phase 1 design doc.
+    // Tokens are deliberately not stored.
     botId: bigint("bot_id", { mode: "number" }).primaryKey(),
     ownerId: bigint("owner_id", { mode: "number" }),
     createdAt: timestamp("created_at", { withTimezone: true })
+        .notNull()
+        .defaultNow()
+});
+
+/** One row per chat, referenced by routes so a route cannot name an unknown chat. */
+export const chats = pgTable("chats", {
+    chatId: bigint("chat_id", { mode: "number" }).primaryKey(),
+    title: text("title").notNull().default(UNNAMED_CHAT),
+    username: text("username").notNull().default(UNKNOWN_USERNAME),
+    type: text("type"),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
         .notNull()
         .defaultNow()
 });
@@ -32,8 +48,13 @@ export const routes = pgTable(
         botId: bigint("bot_id", { mode: "number" })
             .notNull()
             .references(() => bots.botId, { onDelete: "cascade" }),
-        sourceChatId: bigint("source_chat_id", { mode: "number" }).notNull(),
-        destChatId: bigint("dest_chat_id", { mode: "number" }).notNull(),
+        // restrict: deleting a name must not delete routing rules.
+        sourceChatId: bigint("source_chat_id", { mode: "number" })
+            .notNull()
+            .references(() => chats.chatId, { onDelete: "restrict" }),
+        destChatId: bigint("dest_chat_id", { mode: "number" })
+            .notNull()
+            .references(() => chats.chatId, { onDelete: "restrict" }),
         enabled: boolean("enabled").notNull().default(true),
         config: jsonb("config").$type<RouteConfig>().notNull().default({}),
         createdAt: timestamp("created_at", { withTimezone: true })

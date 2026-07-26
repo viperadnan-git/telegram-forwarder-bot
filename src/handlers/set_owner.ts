@@ -1,6 +1,6 @@
 import { BotContext } from "../bot";
 import db from "../store";
-import { getEntity } from "../modules/utils";
+import { resolveChat } from "../modules/utils";
 
 export default async function set_owner_handler(ctx: BotContext) {
     const owner = await db.getOwner(ctx.me.id);
@@ -11,22 +11,18 @@ export default async function set_owner_handler(ctx: BotContext) {
     }
 
     if (ctx.match) {
-        const entity = await getEntity(ctx, ctx.match as string);
+        const resolved = await resolveChat(ctx.api, ctx.match as string);
 
-        if (!entity) {
+        if (!resolved.ok) {
             await ctx.reply(
-                "Invalid user ID. Make sure the user ID is correct and the user has started a conversation with me."
+                `Could not find that user: ${resolved.error}\n` +
+                    "They need to have started a conversation with me first."
             );
             return;
         }
 
-        if (!owner) {
-            await db.setOwner(ctx.me.id, entity.id);
-            await ctx.reply("Owner set.");
-        } else {
-            await db.setOwner(ctx.me.id, entity.id);
-            await ctx.reply("Owner changed.");
-        }
+        await db.setOwner(ctx.me.id, resolved.chat.id);
+        await ctx.reply(owner ? "Owner changed." : "Owner set.");
     } else {
         if (owner) {
             await ctx.reply(

@@ -12,8 +12,8 @@ if (!DATABASE_URL) {
 
 const sql = postgres(DATABASE_URL, {
     max: Number(process.env.DATABASE_POOL_MAX) || 10,
-    // Off unconditionally: a transaction-mode pooler cannot hold them, and the
-    // parse/plan they save is noise next to network latency at this query rate.
+    // A transaction-mode pooler cannot hold them, and the parse/plan saved is
+    // noise next to network latency at this query rate.
     prepare: false,
     onnotice: () => {},
     connection: { application_name: "telegram-forwarder-bot" }

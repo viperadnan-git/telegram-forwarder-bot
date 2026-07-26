@@ -1,0 +1,67 @@
+/** Only the parts of the WebApp object this app uses. */
+type WebApp = {
+    initData: string;
+    ready(): void;
+    expand(): void;
+    close(): void;
+    openTelegramLink?(url: string): void;
+    HapticFeedback?: { notificationOccurred(t: "error" | "success" | "warning"): void };
+    showConfirm?(message: string, cb: (ok: boolean) => void): void;
+};
+
+export const webApp: WebApp | undefined = (globalThis as any).Telegram?.WebApp;
+
+/**
+ * From the launch URL, not initData. Cannot be forged: the server verifies the
+ * signature against this bot_id, so a wrong value fails to authenticate.
+ */
+export function botId(): number {
+    const fromQuery = new URLSearchParams(location.search).get("bot");
+    const fromStart = new URLSearchParams(location.search).get(
+        "tgWebAppStartParam"
+    );
+    return Number(fromQuery ?? fromStart ?? 0);
+}
+
+export function init() {
+    webApp?.ready();
+    webApp?.expand();
+}
+
+export const close = () => webApp?.close();
+
+export const openTelegramLink = (url: string) => {
+    if (webApp?.openTelegramLink) webApp.openTelegramLink(url);
+    else globalThis.open(url, "_blank");
+};
+
+/** navigator.clipboard needs a gesture and a secure context; neither is certain. */
+export async function copyText(text: string): Promise<boolean> {
+    try {
+        await navigator.clipboard.writeText(text);
+        return true;
+    } catch {
+        try {
+            const el = document.createElement("textarea");
+            el.value = text;
+            el.setAttribute("readonly", "");
+            el.style.position = "fixed";
+            el.style.opacity = "0";
+            document.body.appendChild(el);
+            el.select();
+            const ok = document.execCommand("copy");
+            document.body.removeChild(el);
+            return ok;
+        } catch {
+            return false;
+        }
+    }
+}
+
+export const haptic = (type: "success" | "warning" | "error" = "success") =>
+    webApp?.HapticFeedback?.notificationOccurred(type);
+
+export function confirm(message: string): Promise<boolean> {
+    if (!webApp?.showConfirm) return Promise.resolve(globalThis.confirm(message));
+    return new Promise((resolve) => webApp.showConfirm!(message, resolve));
+}

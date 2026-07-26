@@ -1,148 +1,145 @@
-# Telgram Message Forwarder Bot
+# Telegram Message Forwarder Bot
 
-A simple telegram bot to forward messages from one channel to another channel or group. Written in pure Telegram Bot API using grammy framework.
-This bot uses webhooks to receive updates from telegram servers. So, you need a server with a public IP address and a domain name to run this bot. This bot can be deployed on serverless platforms like Vercel, Render, Cyclic etc.
+Forwards messages from one chat to many, each destination with its own filters
+and caption rules. Built on the Telegram Bot API with
+[grammY](https://grammy.dev), backed by PostgreSQL, configured from a Telegram
+Mini App.
+
+Anyone can clone it: forward a BotFather token to the bot and you get your own
+copy, with you as its owner.
 
 ## Features
 
--   Forward messages from one channel to another channel or group
--   Forward messages from multiple channels to multiple channels or groups
--   Forward messages from multiple channels to a single channel or group
--   Forward messages from a single channel to multiple channels or groups
--   Configurations through commands
--   Owner only commands, so no one can misuse the bot
--   Easy to clone and create your own bot withing minutes
--   Control forwarding behavior via bot name (protect content, remove captions)
+- One source chat to many destinations, each configured independently
+- Copy or forward mode, protected content, silent delivery, button removal
+- Allow and block filters on keywords, regex, media type or sender
+- Caption transforms: prepend, append, find and replace, strip links or mentions
+- Formatting survives transforms — entity offsets are recomputed, not dropped
+- Albums arrive as albums instead of being split into separate messages
+- Native chat picker, so there are no ids to type
+- Per-destination pause, without deleting the route
 
 ## Commands
 
--   `/start` - Start the bot
--   `/help` - Show help message
--   `/set` - Add a channel to forward messages from
--   `/rem` - Remove a channel from forwarding messages
--   `/get` - List all the channels added
--   `/set_owner` - Set the owner of the bot
+| Command | |
+| --- | --- |
+| `/set` | Pick source and destination from a list |
+| `/set (source) (destination)` | Add a route without the picker |
+| `/rem (source) (destination)` | Remove one destination, or all with `/rem (source)` |
+| `/get (source)` | List a source's destinations, or everything with `/get` |
+| `/set_owner (user_id)` | Transfer ownership |
+| `/help` | Usage, and a link to the settings app |
 
-## Bot Name Modifiers
+Anywhere a chat is expected you can pass a chat id, an `@username`, or a t.me
+link. Message links work — the chat is taken from the link. Private links of the
+form `t.me/c/<id>/<message>` carry the id directly. Invite links cannot be used
+because they contain no id.
 
-You can control forwarding behavior by adding special characters to your bot's name (via [BotFather](https://t.me/BotFather)):
+## Settings Mini App
 
--   `~` - Enable protected content (forwarded messages cannot be forwarded further or saved)
--   `|` - Remove captions from forwarded messages
+Per-destination settings live in a Mini App, reachable from the chat menu button
+or `/help`. It needs `WEBHOOK_HOST` set.
 
-For example, if your bot is named `MyForwarder~`, all forwarded messages will have content protection enabled. You can combine modifiers, e.g., `MyBot~|` for both protected content and no captions.
+- **Status** — pause or resume a destination
+- **Delivery** — copy or forward, protected content, silent, remove buttons
+- **Filters** — allow-only and never-forward lists. Blocking wins; an empty
+  allow list allows everything
+- **Caption** — remove, prepend, append, find and replace, strip links or
+  mentions
 
-## Configurations
+Regex runs on RE2, so a pattern cannot hang the bot. Lookbehind and
+backreferences are unsupported and rejected when you save.
 
-Configurations are added in environment variables or [`.env.sample`](./.env.sample) file and rename it to `.env`. The following environment variables are required to run the bot.
+Only the owner can open it; everyone else gets instructions for cloning.
 
--   `BOT_TOKEN` - Telegram bot token received from [BotFather](https://t.me/BotFather)
--   `DATABASE_URL` - PostgreSQL connection string. This is the source of truth
--   `WEBHOOK_HOST` - URL of the server where the bot is running
+## Configuration
+
+Copy [`.env.sample`](./.env.sample) to `.env`.
+
+Required:
+
+- `BOT_TOKEN` — from [BotFather](https://t.me/BotFather)
+- `DATABASE_URL` — PostgreSQL connection string, the source of truth
+- `WEBHOOK_HOST` — public HTTPS URL of this server
 
 Optional:
 
--   `REDIS_URI` - Enables a shared cache layer. Only needed for multi-instance or serverless deployments. On a single long-running container the in-process cache is already faster, and leaving this unset is the right choice
--   `CACHE_TTL_SECONDS` - Cache entry lifetime, default `60`
--   `CACHE_MAX_ENTRIES` - In-process cache size cap, default `10000`
--   `DIRECT_DATABASE_URL` - Non-pooled connection string, used for migrations only. Set this when `DATABASE_URL` points at a transaction pooler
--   `DATABASE_POOL_MAX` - Client-side connection pool size, default `10`
+- `REDIS_URI` — shares the cache between instances and across restarts. A single
+  long-running container does not need it; the in-process cache is faster
+- `CACHE_TTL_SECONDS` — default `3600`. Writes invalidate the entries they
+  affect, so this only bounds staleness from direct SQL, or between instances
+  with no shared Redis
+- `CACHE_MAX_ENTRIES` — in-process cache cap, default `10000`
+- `DIRECT_DATABASE_URL` — non-pooled connection, migrations only. Set it when
+  `DATABASE_URL` points at a transaction pooler
+- `DATABASE_POOL_MAX` — default `10`
+- `LOG_LEVEL` — default `debug`, or `info` when `NODE_ENV=production`
 
-### Database setup
+## Database
 
-Apply migrations before starting the bot. This uses the `drizzle-kit` CLI, which
-is a dev dependency, so run it from a checkout with dev dependencies installed —
-not from inside the production image:
+Migrations use the `drizzle-kit` CLI, a dev dependency, so run them from a
+checkout rather than the production image:
 
 ```sh
 bun install
 bun run db:migrate
 ```
 
-After changing `src/db/schema.ts`, regenerate the migration SQL with
-`bun run db:generate`, then apply it. `bun run db:studio` opens a browser UI over
-the database.
+After editing `src/db/schema.ts`, regenerate with `bun run db:generate` and
+apply. `bun run db:studio` opens a browser UI over the database.
 
-If you are upgrading from a Redis-backed version, backfill your existing data
-once (this reads Redis and writes Postgres, and deletes nothing):
+Upgrading from a Redis-backed version? Backfill once — it reads Redis, writes
+Postgres, and deletes nothing:
 
 ```sh
 REDIS_URI=<old-redis-uri> bun run migrate:redis
 ```
 
-## Deploying
+Chats imported this way have placeholder names until you tap **Refresh chat
+names** in the Mini App.
 
-### Deploying on Vercel, Render, Cyclic, Heroku etc.
-
--   Fork this repository
--   Create a new app on the platform you want to deploy
--   Connect your forked repository to the app
--   Set environment variables in the project settings
--   (Optional) Set the `PORT` environment variable to the port number provided by the platform or set it to 3000
-
-### Self-Hosting
-
-Not recommended for beginners.
-
-Note: You need SSL certificates and a public IP address to run the bot. As this bot works on webhooks, you need a domain name to set the webhook URL. You can use [Cloudflare Tunnel](https://try.cloudflare.com/) to get a free temporary domain name and SSL certificates.
-
-#### Using Docker
-
--   Clone this repository
+## Running
 
 ```sh
-git clone <repo-url> <project-name>
-cd <project-name>
+bun install
+bun run build      # Mini App, then the server bundle
+bun start
 ```
 
--   Create a `.env` file with your environment variables (see [`.env.sample`](./.env.sample))
+For development: `bun run dev` for the server, `bun run dev:web` for the Mini
+App, `bun test` for the suite.
 
--   Run with Docker Compose
-
-```sh
-docker-compose up -d
-```
-
-Or build and run manually:
+### Docker
 
 ```sh
 docker build -t telegram-forwarder-bot .
 docker run -d --env-file .env -p 3000:3000 telegram-forwarder-bot
 ```
 
-#### Manual Deployment
+### Behind a tunnel
 
--   Clone this repository
-
-```sh
-git clone <repo-url> <project-name>
-cd <project-name>
-```
-
--   Install dependencies
+The webhook needs a public HTTPS URL.
+[Cloudflare Tunnel](https://try.cloudflare.com/) gives you one:
 
 ```sh
-bun install
+cloudflared tunnel --url http://localhost:3000
 ```
 
--   Build the project
+Set `WEBHOOK_HOST` to the URL it prints.
 
-```sh
-bun run build
-```
+## Upgrading from bot-name modifiers
 
--   Set environment variables
-
--   Start the bot
-
-```sh
-bun start
-```
+`~` and `|` in a bot's name used to set protected content and caption stripping
+for every route. Those are per-destination settings now, and nothing needs
+doing: the first time an upgraded bot handles a message its name is read and the
+equivalent settings are written onto routes still using defaults. Routes you
+have already configured are untouched, and the characters can be dropped from
+the name afterwards.
 
 ## Contributing
 
-Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
+Pull requests welcome. Open an issue first for anything substantial.
 
 ## License
 
-This project is licensed under the GPL-3.0-or-later - see the [LICENSE](LICENSE) file for details
+GPL-3.0-or-later — see [LICENSE](LICENSE).
