@@ -1,11 +1,11 @@
 <script lang="ts">
+import type { Pane } from "../router";
+import type { RouteConfig } from "../types";
 import Hero from "./Hero.svelte";
 import ReplaceList from "./ReplaceList.svelte";
 import RuleList from "./RuleList.svelte";
-import type { Pane } from "./router";
 import Sheet from "./Sheet.svelte";
 import TextArea from "./TextArea.svelte";
-import type { RouteConfig } from "./types";
 
 let {
     pane,

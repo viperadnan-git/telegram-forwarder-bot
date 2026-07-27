@@ -1,10 +1,10 @@
 <script lang="ts">
-import * as api from "./api";
-import ChatInput from "./ChatInput.svelte";
-import Hero from "./Hero.svelte";
-import { run } from "./haptics";
-import Sheet from "./Sheet.svelte";
-import type { Route } from "./types";
+import * as api from "../api";
+import ChatInput from "../components/ChatInput.svelte";
+import Hero from "../components/Hero.svelte";
+import Sheet from "../components/Sheet.svelte";
+import { run } from "../haptics";
+import type { Route } from "../types";
 
 let {
     onclose,

@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import type { Message } from "grammy/types";
 import type { Rule } from "../src/config";
 import { parseConfig } from "../src/config";
-import { matches, mediaKind, passes } from "../src/filters";
+import { matches, mediaKind, passes } from "../src/forwarding/filters";
 
 const msg = (over: Partial<Message> = {}) =>
     ({

@@ -1,5 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { isSupportedPattern, test as matches, matchSpans } from "../src/regex";
+import {
+    isSupportedPattern,
+    test as matches,
+    matchSpans
+} from "../src/forwarding/regex";
 
 // The RE2 boundary: a bad pattern hangs the bot or silently forwards nothing,
 // and a swapped engine once broke matching without failing loudly.

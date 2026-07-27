@@ -1,5 +1,5 @@
 <script lang="ts">
-import { openTelegramLink } from "./telegram";
+import { openTelegramLink } from "../telegram";
 
 // Rendered by Page, so no screen carries a banner of its own.
 const REPO = "https://github.com/viperadnan-git/telegram-forwarder-bot";
@@ -38,9 +38,11 @@ const REPO = "https://github.com/viperadnan-git/telegram-forwarder-bot";
 </footer>
 
 <style>
-/* Closes every main screen: a real target for the repo, then quieter links. */
+/* auto pins it to the bottom of a short page; the padding is the gap on a long
+   one, where auto collapses to nothing. */
 .site-footer {
-    margin: 34px var(--gutter) 0;
+    margin: auto var(--gutter) 0;
+    padding-top: 34px;
     text-align: center;
 }
 

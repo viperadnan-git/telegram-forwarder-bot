@@ -1,5 +1,5 @@
 import type { BotContext } from "../bot";
-import { resolveUser } from "../modules/utils";
+import { resolveUser } from "../lib/utils";
 import db from "../store";
 
 export default async function set_owner_handler(ctx: BotContext) {

@@ -8,21 +8,21 @@ import {
     replacementIssue,
     ruleIssue
 } from "$schema";
-import ConfirmDialog from "./ConfirmDialog.svelte";
-import Hero from "./Hero.svelte";
-import Icon from "./Icon.svelte";
-import RouteLink from "./RouteLink.svelte";
-import RulePane from "./RulePane.svelte";
-import type { Pane } from "./router";
-import Segmented from "./Segmented.svelte";
-import Sheet from "./Sheet.svelte";
-import Switch from "./Switch.svelte";
+import ConfirmDialog from "../components/ConfirmDialog.svelte";
+import Hero from "../components/Hero.svelte";
+import Icon from "../components/Icon.svelte";
+import RouteLink from "../components/RouteLink.svelte";
+import RulePane from "../components/RulePane.svelte";
+import Segmented from "../components/Segmented.svelte";
+import Sheet from "../components/Sheet.svelte";
+import Switch from "../components/Switch.svelte";
+import type { Pane } from "../router";
 import {
     type Route,
     type RouteConfig,
     relativeTime,
     withDefaults
-} from "./types";
+} from "../types";
 
 let {
     route,
@@ -143,8 +143,8 @@ const addedText = $derived(
         disabled={saving || conflict || incomplete}
         onclick={save}
     >
-        <Icon name="check" size={16} />
-        {saving ? "Saving…" : "Save"}
+        <Icon name={saving ? "spinner" : "check"} size={16} spin={saving} />
+        Save
     </button>
 {/snippet}
 
@@ -172,7 +172,11 @@ const addedText = $derived(
             disabled={refreshing}
             onclick={onrefresh}
         >
-            <Icon name="refresh" size={17} />
+            <Icon
+                name={refreshing ? "spinner" : "refresh"}
+                size={17}
+                spin={refreshing}
+            />
         </button>
     </div>
     <RouteLink
@@ -344,11 +348,11 @@ const addedText = $derived(
             disabled={saving || conflict || incomplete}
             onclick={save}
         >
-            <span class="icon"><Icon name="check" /></span>
+            <span class="icon">
+                <Icon name={saving ? "spinner" : "check"} spin={saving} />
+            </span>
             <span class="grow">
-                <span class="row-label">
-                    {saving ? "Saving…" : "Save changes"}
-                </span>
+                <span class="row-label">Save changes</span>
             </span>
         </button>
         <button

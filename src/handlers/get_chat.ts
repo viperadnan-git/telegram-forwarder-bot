@@ -1,5 +1,5 @@
 import { type BotContext, miniAppUrl } from "../bot";
-import { escapeHtml, formatObject, resolveChat } from "../modules/utils";
+import { escapeHtml, formatObject, resolveChat } from "../lib/utils";
 import db from "../store";
 
 export default async function get_chat_handler(ctx: BotContext) {

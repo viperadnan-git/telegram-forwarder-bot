@@ -4,7 +4,7 @@ import {
     type MediaKind,
     type RouteConfig,
     type Rule
-} from "./config";
+} from "../config";
 import { test as regexTest } from "./regex";
 
 /** The message's content type, used by media rules. */

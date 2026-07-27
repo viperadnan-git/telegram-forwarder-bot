@@ -8,6 +8,7 @@ export type Loc =
               | "owner"
               | "not-owner"
               | "unclaimed"
+              | "clone"
               | "add";
       }
     | { name: "route"; id: string; pane: Pane | null };
@@ -18,6 +19,7 @@ const TOP = [
     "owner",
     "not-owner",
     "unclaimed",
+    "clone",
     "add"
 ] as const;
 

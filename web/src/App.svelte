@@ -1,15 +1,9 @@
 <script lang="ts">
 import { tick } from "svelte";
-import AddRoute from "./lib/AddRoute.svelte";
 import * as api from "./lib/api";
 import { ApiError } from "./lib/api";
-import ConfirmDialog from "./lib/ConfirmDialog.svelte";
-import Help from "./lib/Help.svelte";
+import ConfirmDialog from "./lib/components/ConfirmDialog.svelte";
 import { run } from "./lib/haptics";
-import NoAccess from "./lib/NoAccess.svelte";
-import Owner from "./lib/Owner.svelte";
-import RouteEditor from "./lib/RouteEditor.svelte";
-import Routes from "./lib/Routes.svelte";
 import {
     back,
     currentDepth,
@@ -21,6 +15,13 @@ import {
     push,
     replace
 } from "./lib/router";
+import AddRoute from "./lib/screens/AddRoute.svelte";
+import Clone from "./lib/screens/Clone.svelte";
+import Help from "./lib/screens/Help.svelte";
+import NoAccess from "./lib/screens/NoAccess.svelte";
+import Owner from "./lib/screens/Owner.svelte";
+import RouteEditor from "./lib/screens/RouteEditor.svelte";
+import Routes from "./lib/screens/Routes.svelte";
 import {
     backButton,
     botId,
@@ -216,11 +217,17 @@ else loading = false;
         onback={() => (depth > 0 ? back() : close())}
         backLabel={depth > 0 ? "Back" : "Close"}
     />
+{:else if view === "clone"}
+    <Clone
+        onback={() => (depth > 0 ? back() : close())}
+        backLabel={depth > 0 ? "Back" : "Close"}
+        onclaimed={() => go({ name: "settings" })}
+    />
 {:else if view === "not-owner" || view === "unclaimed"}
     <NoAccess
         reason={view}
         onhelp={() => go({ name: "help" })}
-        onclaimed={() => go({ name: "settings" })}
+        onclone={() => go({ name: "clone" })}
     />
 {:else}
     <Routes
@@ -233,6 +240,7 @@ else loading = false;
         onmanual={() => go({ name: "add" })}
         onhelp={() => go({ name: "help" })}
         onowner={() => go({ name: "owner" })}
+        onclone={() => go({ name: "clone" })}
     />
 {/if}
 

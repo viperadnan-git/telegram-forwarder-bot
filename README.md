@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="web/public/favicon.svg" width="120" height="120" alt="" />
+
 # telegram-forwarder-bot
 
 Forwards messages from one chat to many, each destination with its own filters and caption rules — configured from a Telegram Mini App.
@@ -35,7 +37,7 @@ Forwards messages from one chat to many, each destination with its own filters a
 - **Albums stay albums.** Grouped media arrives grouped, not split into separate messages.
 - **Linear-time patterns.** Regex runs on RE2, so a user pattern cannot hang the bot.
 - **Native chat picker.** Telegram's own chat list, so there are no ids to type.
-- **Self-service cloning.** Paste a BotFather token and you own a copy. Tokens are verified with Telegram and never stored.
+- **Self-service cloning.** Paste a BotFather token and you own a clone. Tokens are verified with Telegram and never stored.
 
 ---
 
@@ -172,11 +174,9 @@ names** in the Mini App.
 ### Upgrading from bot-name modifiers
 
 `~` and `|` in a bot's name used to set protected content and caption stripping
-for every route. Those are per-destination settings now, and nothing needs
-doing: the first time an upgraded bot handles a message its name is read and the
-equivalent settings are written onto routes still using defaults. Routes you
-have already configured are untouched, and the characters can be dropped from
-the name afterwards.
+for every route. They no longer do anything — both are per-destination settings,
+set in the Mini App. Drop the characters from the name and turn the settings on
+for the destinations that want them.
 
 ---
 

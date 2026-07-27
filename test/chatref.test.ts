@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { parseChatRef } from "../src/chatref";
+import { parseChatRef } from "../src/lib/chatref";
 
 const id = (input: string) => {
     const r = parseChatRef(input);

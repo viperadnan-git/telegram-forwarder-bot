@@ -1,5 +1,5 @@
 <script lang="ts">
-import { selection } from "./haptics";
+import { selection } from "../haptics";
 
 let {
     checked = $bindable(),

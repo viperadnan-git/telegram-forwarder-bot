@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { MessageEntity } from "grammy/types";
 import { parseConfig } from "../src/config";
-import { applyCaption, clamp } from "../src/transforms";
+import { applyCaption, clamp } from "../src/forwarding/transforms";
 
 const cap = (over: Record<string, unknown> = {}) =>
     parseConfig({ caption: over }).caption;

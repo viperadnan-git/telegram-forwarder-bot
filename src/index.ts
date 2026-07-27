@@ -11,7 +11,7 @@ import { webhookCallback } from "grammy";
 import packageJson from "../package.json";
 import { createApiRouter, param } from "./api";
 import { botCreator, bots, WEBHOOK_HOST } from "./bot";
-import logger from "./modules/logger";
+import logger from "./lib/logger";
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;

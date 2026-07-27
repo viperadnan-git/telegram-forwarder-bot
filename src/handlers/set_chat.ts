@@ -1,5 +1,5 @@
 import type { BotContext } from "../bot";
-import { escapeHtml, resolveChat } from "../modules/utils";
+import { escapeHtml, resolveChat } from "../lib/utils";
 import db from "../store";
 import { startPicker } from "./pick";
 

@@ -1,5 +1,5 @@
 {
-  "id": "c8f98967-dd17-42b1-85cb-de146bc6b690",
+  "id": "3503f03a-8f21-4a29-a1c3-f72d9e0610c6",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -17,12 +17,6 @@
         "owner_id": {
           "name": "owner_id",
           "type": "bigint",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "legacy_flags_migrated_at": {
-          "name": "legacy_flags_migrated_at",
-          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false
         },

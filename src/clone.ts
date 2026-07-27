@@ -1,6 +1,6 @@
 import { type Api, Bot } from "grammy";
 import { botCreator, bots, WEBHOOK_HOST } from "./bot";
-import logger from "./modules/logger";
+import logger from "./lib/logger";
 import { botTokenSchema } from "./schema";
 import db from "./store";
 

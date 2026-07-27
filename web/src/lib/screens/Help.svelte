@@ -1,9 +1,9 @@
 <script lang="ts">
-import BackBar from "./BackBar.svelte";
-import Hero from "./Hero.svelte";
-import { impact } from "./haptics";
-import Page from "./Page.svelte";
-import { botId, copyText } from "./telegram";
+import BackBar from "../components/BackBar.svelte";
+import Hero from "../components/Hero.svelte";
+import Page from "../components/Page.svelte";
+import { impact } from "../haptics";
+import { botId, copyText } from "../telegram";
 
 let { onback, backLabel = "Back" }: { onback: () => void; backLabel?: string } =
     $props();
@@ -240,10 +240,10 @@ const faq = [
     </div>
     <p class="note">
         Only the owner can use /set, /get, /rem and /settings. Everyone else can
-        still run their own copy.
+        still run their own clone.
     </p>
 
-    <h2 class="section-title">Make your own copy</h2>
+    <h2 class="section-title">Make your own clone</h2>
     <div class="card">
         {#each cloneSteps as step, i}
             <div class="row">

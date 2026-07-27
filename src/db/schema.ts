@@ -23,10 +23,6 @@ export const bots = pgTable("bots", {
     // Tokens are deliberately not stored.
     botId: bigint("bot_id", { mode: "number" }).primaryKey(),
     ownerId: bigint("owner_id", { mode: "number" }),
-    // One-shot marker for the bot-name modifier migration in legacy.ts.
-    legacyFlagsMigratedAt: timestamp("legacy_flags_migrated_at", {
-        withTimezone: true
-    }),
     createdAt: timestamp("created_at", { withTimezone: true })
         .notNull()
         .defaultNow()

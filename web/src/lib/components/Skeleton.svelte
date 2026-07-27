@@ -9,8 +9,8 @@ const groups = [2, 1];
             <span class="link-rail down"></span>
             <span class="sk node-sk"></span>
             <div class="grow">
-                <div class="sk" style="width:50%; height:15px"></div>
-                <div class="sk" style="width:28%; height:11px; margin-top:7px"></div>
+                <div class="sk" style="width:50%; height:17px"></div>
+                <div class="sk" style="width:28%; height:14px; margin-top:3px"></div>
             </div>
         </div>
         {#each { length: destinations } as _, i}
@@ -23,14 +23,14 @@ const groups = [2, 1];
                 <div class="grow">
                     <div
                         class="sk"
-                        style="width:{56 - i * 9}%; height:15px; animation-delay:{(g *
+                        style="width:{56 - i * 9}%; height:17px; animation-delay:{(g *
                             2 +
                             i) *
                             0.09}s"
                     ></div>
                     <div
                         class="sk"
-                        style="width:{32 + i * 8}%; height:11px; margin-top:7px"
+                        style="width:{32 + i * 8}%; height:14px; margin-top:3px"
                     ></div>
                 </div>
             </div>

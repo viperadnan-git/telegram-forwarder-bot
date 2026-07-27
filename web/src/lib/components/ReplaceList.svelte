@@ -1,8 +1,8 @@
 <script lang="ts">
 import { isBlankReplacement } from "$schema";
+import type { RouteConfig } from "../types";
 import Check from "./Check.svelte";
 import Icon from "./Icon.svelte";
-import type { RouteConfig } from "./types";
 
 let { rules = $bindable() }: { rules: RouteConfig["caption"]["replace"] } =
     $props();

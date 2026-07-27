@@ -8,8 +8,8 @@ import { getBotById } from "../bot";
 import { claimBot, describeBot } from "../clone";
 import { validateConfig } from "../config";
 import { sourceKeyboard } from "../handlers/pick";
-import logger from "../modules/logger";
-import { resolveChat, resolveUser } from "../modules/utils";
+import logger from "../lib/logger";
+import { resolveChat, resolveUser } from "../lib/utils";
 import db from "../store";
 import { verifyInitData } from "./auth";
 

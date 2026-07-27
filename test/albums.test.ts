@@ -1,6 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import type { Message } from "grammy/types";
-import { AlbumBuffer, isAlbumPart, TELEGRAM_ALBUM_MAX } from "../src/albums";
+import {
+    AlbumBuffer,
+    isAlbumPart,
+    TELEGRAM_ALBUM_MAX
+} from "../src/forwarding/albums";
 
 const part = (id: number, group?: string, chat = -100) =>
     ({

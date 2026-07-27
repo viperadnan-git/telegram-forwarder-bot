@@ -6,10 +6,10 @@ import type {
     InputMediaVideo,
     Message
 } from "grammy/types";
-import { hasCaptionTransform, parseConfig, type RouteConfig } from "./config";
+import { hasCaptionTransform, parseConfig, type RouteConfig } from "../config";
+import logger from "../lib/logger";
+import type { Route } from "../store";
 import { passes } from "./filters";
-import logger from "./modules/logger";
-import type { Route } from "./store";
 import { applyCaption, clamp, type TextAndEntities } from "./transforms";
 
 const TEXT_LIMIT = 4096;

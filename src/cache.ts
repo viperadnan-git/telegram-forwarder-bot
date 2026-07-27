@@ -1,5 +1,5 @@
 import { Redis } from "ioredis";
-import logger from "./modules/logger";
+import logger from "./lib/logger";
 
 // Not the legacy `fwdbot:` root: it is scanned with patterns like
 // `fwdbot:*:owner`, which a cache key must never match.

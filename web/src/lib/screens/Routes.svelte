@@ -1,10 +1,10 @@
 <script lang="ts">
-import ActionRow from "./ActionRow.svelte";
-import Hero from "./Hero.svelte";
-import Page from "./Page.svelte";
-import RouteLink from "./RouteLink.svelte";
-import Skeleton from "./Skeleton.svelte";
-import { type Route, withDefaults } from "./types";
+import ActionRow from "../components/ActionRow.svelte";
+import Hero from "../components/Hero.svelte";
+import Page from "../components/Page.svelte";
+import RouteLink from "../components/RouteLink.svelte";
+import Skeleton from "../components/Skeleton.svelte";
+import { type Route, withDefaults } from "../types";
 
 let {
     routes,
@@ -15,7 +15,8 @@ let {
     onpick,
     onmanual,
     onhelp,
-    onowner
+    onowner,
+    onclone
 }: {
     routes: Route[];
     loading: boolean;
@@ -26,6 +27,7 @@ let {
     onmanual: () => void;
     onhelp: () => void;
     onowner: () => void;
+    onclone: () => void;
 } = $props();
 
 const grouped = $derived(
@@ -68,7 +70,7 @@ const plural = (n: number, one: string, many = `${one}s`) =>
 </script>
 
 <Page footer>
-    <Hero icon="forward" title="Forwarding">
+    <Hero icon="mark" title="Echo Message">
         {#if loading}
             &nbsp;
         {:else if routes.length}
@@ -129,5 +131,6 @@ const plural = (n: number, one: string, many = `${one}s`) =>
     <div class="card inset-rules">
         <ActionRow icon="help" label="How it works" onclick={onhelp} />
         <ActionRow icon="owner" label="Owner" onclick={onowner} />
+        <ActionRow icon="key" label="Clone bot" onclick={onclone} />
     </div>
 </Page>

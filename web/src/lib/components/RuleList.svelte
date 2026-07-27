@@ -1,10 +1,10 @@
 <script lang="ts">
 import { isBlankRule, ruleIssue } from "$schema";
-import { selection } from "./haptics";
+import { selection } from "../haptics";
+import { type MatchTarget, MEDIA_KINDS, type Rule } from "../types";
 import Icon from "./Icon.svelte";
 import Segmented from "./Segmented.svelte";
 import Switch from "./Switch.svelte";
-import { type MatchTarget, MEDIA_KINDS, type Rule } from "./types";
 
 let { rules = $bindable([]) }: { rules: Rule[] } = $props();
 

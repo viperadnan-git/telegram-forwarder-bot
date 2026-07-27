@@ -3,8 +3,8 @@ import type {
     ReplyKeyboardMarkup
 } from "grammy/types";
 import { type BotContext, miniAppUrl } from "../bot";
-import logger from "../modules/logger";
-import { escapeHtml } from "../modules/utils";
+import logger from "../lib/logger";
+import { escapeHtml } from "../lib/utils";
 import db from "../store";
 
 /**
@@ -42,9 +42,9 @@ function takePending(botId: number, userId: number): Pending | undefined {
 }
 
 /**
- * `bot_is_member` is ignored for channels: requestPeerTypeBroadcast has no
- * `bot_participant` field, only requestPeerTypeChat does. Admin rights are the
- * working filter there, and a bot must be an admin to see channel posts anyway.
+ * `bot_is_member` is ignored for channels — requestPeerTypeBroadcast has no
+ * `bot_participant` field. Admin rights are the working filter, and a bot must
+ * be an admin to see channel posts anyway.
  */
 const adminRights = (
     extra: Partial<ChatAdministratorRights> = {}

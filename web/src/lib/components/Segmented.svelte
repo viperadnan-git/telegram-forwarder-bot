@@ -1,5 +1,5 @@
 <script lang="ts">
-import { selection } from "./haptics";
+import { selection } from "../haptics";
 
 // Owns the selection haptic, so no call site has to remember it.
 let {

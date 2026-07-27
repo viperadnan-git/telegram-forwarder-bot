@@ -1,4 +1,4 @@
-import { compile, isSupportedPattern } from "./regex";
+import { compile, isSupportedPattern } from "./forwarding/regex";
 import { type RouteConfig, routeConfigSchema } from "./schema";
 
 export * from "./schema";
@@ -16,10 +16,7 @@ export const hasCaptionTransform = (c: RouteConfig) =>
 const modifiesContent = (c: RouteConfig) =>
     hasCaptionTransform(c) || c.removeButtons;
 
-/**
- * Names the offending field the way the app labels it, so a rejection reads as
- * an instruction rather than a schema path.
- */
+/** Names the field as the app labels it, so a rejection reads as an instruction. */
 function describe(path: readonly PropertyKey[]): string {
     const [a, b, i] = path;
     const nth = typeof i === "number" ? i + 1 : 0;

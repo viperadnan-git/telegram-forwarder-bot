@@ -1,7 +1,7 @@
 <script lang="ts">
+import type { Route } from "../types";
+import Avatar from "./Avatar.svelte";
 import CopyId from "./CopyId.svelte";
-import Icon from "./Icon.svelte";
-import type { Route } from "./types";
 
 // One source feeding many destinations: stated once, with a rail running down
 // through each, so the linkage is drawn rather than inferred.
@@ -23,9 +23,7 @@ let {
 <div class="card linkage">
     <div class="link-source">
         <span class="link-rail down" aria-hidden="true"></span>
-        <span class="link-node">
-            <Icon name="source" size={13} stroke={2.4} />
-        </span>
+        <Avatar chatId={sourceChatId} name={sourceName} />
         <span class="grow">
             <span class="chat-name">{sourceName || "Unnamed chat"}</span>
             <CopyId id={sourceChatId} />
@@ -49,9 +47,7 @@ let {
                 <!-- Carries the line on to the next destination. -->
                 <span class="link-rail down" aria-hidden="true"></span>
             {/if}
-            <span class="link-node">
-                <Icon name="arrow" size={13} stroke={2.4} />
-            </span>
+            <Avatar chatId={route.destChatId} name={route.destName} />
             <span class="grow">
                 <span class="chat-name">
                     {route.destName || "Unnamed chat"}

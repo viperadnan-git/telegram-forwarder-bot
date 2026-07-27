@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { Api } from "grammy";
 import type { Message } from "grammy/types";
-import { deliver, fanOut } from "../src/forward";
+import { deliver, fanOut } from "../src/forwarding/forward";
 import type { Route } from "../src/store";
 
 type Call = { method: string; args: any[] };

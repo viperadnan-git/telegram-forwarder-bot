@@ -1,6 +1,6 @@
 <script lang="ts">
-import { impact } from "./haptics";
-import { copyText } from "./telegram";
+import { impact } from "../haptics";
+import { copyText } from "../telegram";
 
 let { id }: { id: number } = $props();
 

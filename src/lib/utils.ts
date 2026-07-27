@@ -1,6 +1,6 @@
 import type { Api } from "grammy";
 import type { ChatFullInfo } from "grammy/types";
-import { parseChatRef } from "../chatref";
+import { parseChatRef } from "./chatref";
 
 /** Renders a source and its destinations as a tree, for /get. */
 export const formatObject = (obj: {
@@ -18,10 +18,7 @@ export const formatObject = (obj: {
         })
         .join("");
 
-/**
- * parseMode is HTML for every reply, so anything a user or a chat title
- * supplies has to be escaped or Telegram rejects the whole message.
- */
+/** Every reply is HTML, so unescaped user text makes Telegram reject it. */
 export const escapeHtml = (text: string): string =>
     text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
@@ -29,10 +26,7 @@ export type ResolveResult =
     | { ok: true; chat: ChatFullInfo }
     | { ok: false; error: string };
 
-/**
- * getChat resolves a @username only for public chats, never for a person, so
- * an owner can only ever be given as a numeric id.
- */
+/** getChat resolves a @username for public chats only, never for a person. */
 export async function resolveUser(
     api: Api,
     input: string

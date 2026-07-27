@@ -13,7 +13,7 @@ import set_chat_handler from "./handlers/set_chat";
 import set_owner_handler from "./handlers/set_owner";
 import settings_handler from "./handlers/settings";
 import start_handler from "./handlers/start";
-import logger from "./modules/logger";
+import logger from "./lib/logger";
 
 export type BotContext = ParseModeFlavor<Context>;
 

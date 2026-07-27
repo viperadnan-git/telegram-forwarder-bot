@@ -5,7 +5,7 @@ import {
     formatObject,
     resolveChat,
     resolveUser
-} from "../src/modules/utils";
+} from "../src/lib/utils";
 
 /** Only getChat is used, and only its shape matters. */
 const api = (impl: (id: string | number) => unknown) =>

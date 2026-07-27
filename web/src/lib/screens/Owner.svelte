@@ -1,10 +1,10 @@
 <script lang="ts">
-import * as api from "./api";
-import BackBar from "./BackBar.svelte";
-import Hero from "./Hero.svelte";
-import { impact, run } from "./haptics";
-import Page from "./Page.svelte";
-import { close, confirm, copyText, myId } from "./telegram";
+import * as api from "../api";
+import BackBar from "../components/BackBar.svelte";
+import Hero from "../components/Hero.svelte";
+import Page from "../components/Page.svelte";
+import { impact, run } from "../haptics";
+import { close, confirm, copyText, myId } from "../telegram";
 
 let { onback, backLabel = "Back" }: { onback: () => void; backLabel?: string } =
     $props();

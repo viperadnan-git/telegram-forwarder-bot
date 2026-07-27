@@ -1,5 +1,5 @@
 import type { MessageEntity } from "grammy/types";
-import type { RouteConfig } from "./config";
+import type { RouteConfig } from "../config";
 import { matchSpans } from "./regex";
 
 // Telegram entity offsets are UTF-16 code units, as are JS string indices.

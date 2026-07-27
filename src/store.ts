@@ -47,23 +47,6 @@ class Store {
         return owner ?? undefined;
     }
 
-    /** False once the bot-name modifier migration has run for this bot. */
-    async needsLegacyMigration(botId: number): Promise<boolean> {
-        const [row] = await db
-            .select({ at: bots.legacyFlagsMigratedAt })
-            .from(bots)
-            .where(eq(bots.botId, botId))
-            .limit(1);
-        return row !== undefined && row.at === null;
-    }
-
-    async markLegacyMigrated(botId: number) {
-        await db
-            .update(bots)
-            .set({ legacyFlagsMigratedAt: new Date() })
-            .where(eq(bots.botId, botId));
-    }
-
     async setOwner(botId: number, userId: number) {
         await db
             .insert(bots)
@@ -241,28 +224,6 @@ class Store {
             .returning({ sourceChatId: routes.sourceChatId });
         if (row) await routeCache.invalidate(routeKey(botId, row.sourceChatId));
         return row !== undefined;
-    }
-
-    /** Only routes still on the default `{}`; never clobbers a real setting. */
-    async backfillDefaultConfig(
-        botId: number,
-        config: Record<string, unknown>
-    ): Promise<number> {
-        const changed = await db
-            .update(routes)
-            .set({ config })
-            .where(
-                and(
-                    eq(routes.botId, botId),
-                    sql`${routes.config} = '{}'::jsonb`
-                )
-            )
-            .returning({ sourceChatId: routes.sourceChatId });
-
-        for (const source of new Set(changed.map((r) => r.sourceChatId))) {
-            await routeCache.invalidate(routeKey(botId, source));
-        }
-        return changed.length;
     }
 
     async getAllChatMap(botId: number): Promise<Record<string, number[]>> {

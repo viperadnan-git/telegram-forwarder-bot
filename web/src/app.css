@@ -121,21 +121,31 @@ button {
     border-radius: 6px;
 }
 
+/* A column, so a short page can push its footer down. The body stays a block:
+   margins between its children must keep collapsing. */
 .page {
+    display: flex;
+    flex-direction: column;
+    min-height: 100dvh;
     max-width: 620px;
     margin: 0 auto;
-    padding: 0 var(--gutter) calc(var(--safe-bottom) + 48px);
+    padding: 0 var(--gutter) calc(var(--safe-bottom) + 10px);
+}
+
+/* Without a footer the page owes itself the same room to end in. */
+.page-body:last-child {
+    padding-bottom: 38px;
 }
 
 /* First block on a page, when it is not a hero or a bar. */
-.page > .card:first-child,
-.page > .section-title:first-child,
-.page > .stagger:first-child {
+.page-body > .card:first-child,
+.page-body > .section-title:first-child,
+.page-body > .stagger:first-child {
     margin-top: calc(var(--safe-top) + var(--top-gap));
 }
 
-.sheet .page > .card:first-child,
-.sheet .page > .section-title:first-child {
+.sheet .page-body > .card:first-child,
+.sheet .page-body > .section-title:first-child {
     margin-top: 0;
 }
 
@@ -147,7 +157,7 @@ button {
 }
 
 /* No bar above it to clear the inset, so it carries that too. */
-.page > .hero:first-child {
+.page-body > .hero:first-child {
     padding-top: calc(var(--safe-top) + var(--top-gap));
 }
 
@@ -177,8 +187,9 @@ button {
 }
 
 /* A bigger picture needs less air beside it than a 22px glyph does. */
-.row:has(.avatar-sm) {
-    gap: 11px;
+.row:has(.avatar-sm),
+.row:has(.chat-avatar) {
+    gap: 8px;
     min-height: 54px;
 }
 
@@ -450,7 +461,7 @@ button.chip {
 /* --- source to destination linkage ------------------------------------- */
 
 .linkage {
-    --node: 22px;
+    --node: 34px;
     --node-x: calc(var(--gutter) + var(--node) / 2);
     margin-bottom: 10px;
 }
@@ -460,7 +471,7 @@ button.chip {
     position: relative;
     display: flex;
     align-items: center;
-    gap: 13px;
+    gap: 8px;
     width: 100%;
     min-height: 44px;
     padding: 8px var(--gutter);
@@ -475,21 +486,23 @@ button.chip {
     transition: background-color 0.4s ease-out;
 }
 
-/* The node is the fixed point both the rail and the labels align to. */
-.link-node {
+/* The node the rail and labels align to, and the chat itself. */
+.chat-avatar {
     flex: none;
-    display: grid;
-    place-items: center;
-    width: var(--node);
-    height: var(--node);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--node, 34px);
+    height: var(--node, 34px);
     border-radius: 50%;
-    background: var(--tint);
-    color: var(--accent);
-}
-
-.link-source .link-node {
-    background: var(--accent);
-    color: var(--button-text);
+    color: #fff;
+    font-size: calc(var(--node, 34px) * 0.38);
+    font-weight: 600;
+    line-height: 1;
+    /* Uppercase leaves the descender space empty, which reads as too high. */
+    padding-top: 0.06em;
+    text-align: center;
+    user-select: none;
 }
 
 /* Runs into this node from above, which is what reads as linkage. */
@@ -526,7 +539,7 @@ button.chip {
 
 .link-dest > .grow,
 .link-dest > .chevron,
-.link-dest > .link-node {
+.link-dest > .chat-avatar {
     position: relative;
     z-index: 1;
     pointer-events: none;
@@ -542,9 +555,9 @@ button.chip {
     opacity: 0.5;
 }
 
-.link-dest.paused .link-node {
-    background: var(--fill-strong);
-    color: var(--subtitle);
+.link-dest.paused .chat-avatar {
+    filter: grayscale(1);
+    opacity: 0.55;
 }
 
 /* --- cards and rows ----------------------------------------------------- */

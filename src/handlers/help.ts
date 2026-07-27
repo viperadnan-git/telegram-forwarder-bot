@@ -38,7 +38,7 @@ export default async function help_handler(ctx: BotContext) {
         body =
             "I copy new messages from one chat into another.\n\n" +
             "This one belongs to someone else, so its forwarding is not yours to " +
-            "change. To run your own copy, create a bot with @BotFather and " +
+            "change. To run your own clone, create a bot with @BotFather and " +
             "forward me the message with its token.";
     }
 

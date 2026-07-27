@@ -1,10 +1,9 @@
 import type { Api } from "grammy";
 import type { Message } from "grammy/types";
-import { AlbumBuffer, isAlbumPart } from "../albums";
 import type { BotContext } from "../bot";
-import { fanOut } from "../forward";
-import { backfillBotNameFlags } from "../legacy";
-import logger from "../modules/logger";
+import { AlbumBuffer, isAlbumPart } from "../forwarding/albums";
+import { fanOut } from "../forwarding/forward";
+import logger from "../lib/logger";
 import db from "../store";
 
 async function dispatch(api: Api, botId: number, parts: Message[]) {
@@ -35,8 +34,6 @@ const albums = new AlbumBuffer<Api>((botId, parts, api) => {
 export default async function message_handler(ctx: BotContext) {
     const message = (ctx.message ?? ctx.channelPost) as Message | undefined;
     if (!message) return;
-
-    backfillBotNameFlags(ctx.me.id, ctx.me.first_name);
 
     if (isAlbumPart(message)) {
         albums.add(ctx.me.id, message, ctx.api);

@@ -1,7 +1,6 @@
 CREATE TABLE "bots" (
 	"bot_id" bigint PRIMARY KEY NOT NULL,
 	"owner_id" bigint,
-	"legacy_flags_migrated_at" timestamp with time zone,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint

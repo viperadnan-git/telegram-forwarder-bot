@@ -1,5 +1,5 @@
 import type { BotContext } from "../bot";
-import { escapeHtml, resolveChat } from "../modules/utils";
+import { escapeHtml, resolveChat } from "../lib/utils";
 import db from "../store";
 
 export default async function rem_chat_handler(ctx: BotContext) {
