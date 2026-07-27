@@ -114,7 +114,7 @@ function keyboard(
 export const sourceKeyboard = () =>
     keyboard(REQUEST.SOURCE_CHANNEL, REQUEST.SOURCE_GROUP, "source");
 
-export const destinationKeyboard = () =>
+const destinationKeyboard = () =>
     keyboard(REQUEST.DEST_CHANNEL, REQUEST.DEST_GROUP, "destination");
 
 /** Drops a half-finished pick. Returns false if there was nothing to drop. */

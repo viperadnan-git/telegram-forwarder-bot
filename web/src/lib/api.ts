@@ -62,11 +62,11 @@ export const startSetFlow = () =>
 export const listRoutes = () =>
     request<{ routes: Route[] }>("/routes").then((r) => r.routes);
 
-/** User-triggered, never automatic. */
-export const refreshChatNames = () =>
+/** User-triggered, never automatic. Omit chatIds to refresh every chat. */
+export const refreshChatNames = (chatIds?: number[]) =>
     request<{ updated: number; failed: number; routes: Route[] }>(
         "/chats/refresh",
-        { method: "POST" }
+        { method: "POST", body: JSON.stringify({ chatIds }) }
     );
 
 export const updateRoute = (

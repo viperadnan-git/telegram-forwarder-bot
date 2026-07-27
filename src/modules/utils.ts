@@ -37,8 +37,9 @@ export async function resolveUser(
     api: Api,
     input: string
 ): Promise<ResolveResult> {
-    const id = Number(input.trim());
-    if (!Number.isSafeInteger(id)) {
+    const trimmed = input.trim();
+    const id = Number(trimmed);
+    if (!trimmed || !Number.isSafeInteger(id)) {
         return {
             ok: false,
             error: "Telegram only finds people by numeric id, not by @username"

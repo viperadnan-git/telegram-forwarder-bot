@@ -2,15 +2,10 @@
 import { tokenIssue } from "$schema";
 import * as api from "./api";
 import Hero from "./Hero.svelte";
+import { impact, run } from "./haptics";
 import Icon from "./Icon.svelte";
-import {
-    botId,
-    close,
-    copyText,
-    haptic,
-    myId,
-    openTelegramLink
-} from "./telegram";
+import Page from "./Page.svelte";
+import { botId, close, copyText, myId, openTelegramLink } from "./telegram";
 
 let {
     reason,
@@ -29,7 +24,7 @@ const mine = myId();
 async function copyMine() {
     if (mine === undefined || !(await copyText(String(mine)))) return;
     copied = true;
-    haptic();
+    impact();
     setTimeout(() => (copied = false), 1600);
 }
 
@@ -64,13 +59,11 @@ async function confirm() {
     claiming = true;
     error = "";
     try {
-        const result = await api.clone(token.trim());
+        const result = await run(() => api.clone(token.trim()));
         token = "";
         found = null;
-        haptic();
-        // Reclaiming the bot whose app this is: the signed initData is for that
-        // bot, so its settings open right here. Any other bot has to be opened
-        // from its own chat, where Telegram will sign for it.
+        // The initData is signed for this bot only, so only this bot's settings
+        // can open here; any other has to be opened from its own chat.
         if (result.bot.id === botId()) {
             onclaimed();
             return;
@@ -99,7 +92,7 @@ const steps = [
 ];
 </script>
 
-<div class="page">
+<Page footer>
     <Hero
         icon="key"
         photo={claimed?.bot.photo}
@@ -211,25 +204,17 @@ const steps = [
             </div>
         {:else}
             <div class="card">
-                <div class="field">
-                    <label for="token">Bot token</label>
-                    <input
-                        id="token"
-                        class="input mono {issue ? 'invalid' : ''}"
-                        type="text"
-                        bind:value={token}
-                        placeholder="123456789:AA-Hh…"
-                        autocapitalize="off"
-                        autocorrect="off"
-                        spellcheck="false"
-                    />
-                    {#if issue}
-                        <div class="sub" style="color:var(--destructive)">
-                            {issue}
-                        </div>
-                    {/if}
-                </div>
+                <input
+                    class="input mono {issue ? 'invalid' : ''}"
+                    type="text"
+                    bind:value={token}
+                    placeholder="Enter bot token"
+                    autocapitalize="off"
+                    autocorrect="off"
+                    spellcheck="false"
+                />
             </div>
+            {#if issue}<p class="note invalid-note">{issue}</p>{/if}
             <p class="note">
                 Checked with Telegram and never stored. If you created this bot,
                 pasting its token takes it back.
@@ -303,4 +288,4 @@ const steps = [
             </button>
         </div>
     {/if}
-</div>
+</Page>

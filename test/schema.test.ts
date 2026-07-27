@@ -1,7 +1,10 @@
 import { describe, expect, test } from "bun:test";
+import { validateConfig } from "../src/config";
 import {
     botTokenSchema,
+    isBlankRule,
     patternHint,
+    pruneConfig,
     replacementIssue,
     routeConfigSchema,
     ruleIssue,
@@ -9,8 +12,8 @@ import {
     withDefaults
 } from "../src/schema";
 
-// These drive the editor's live feedback, so a wrong answer either blocks a
-// valid save or lets an invalid one through to the server.
+// Drives the editor's live feedback: a wrong answer blocks a valid save or lets
+// an invalid one through.
 describe("ruleIssue", () => {
     test("a complete keyword rule has no issue", () => {
         expect(
@@ -131,8 +134,8 @@ describe("withDefaults", () => {
 });
 
 describe("trimming of matched text", () => {
-    // A phone keyboard adds a space after a word, and the input cannot show it.
-    // Left in place it silently stops the rule matching anything.
+    // A phone keyboard appends an invisible space that would stop the rule
+    // matching anything.
     test("a keyword is trimmed", () => {
         const rule = { type: "keyword", value: "Test ", target: "text" };
         expect(ruleIssue(rule)).toBeNull();
@@ -178,6 +181,19 @@ describe("trimming of matched text", () => {
         ).toMatchObject({ value: "two words" });
     });
 
+    // Every kind of edge whitespace a signature might carry on purpose.
+    test.each([
+        ["a trailing newline", "TOP\n"],
+        ["leading spaces", "   TOP"],
+        ["trailing spaces", "TOP   "],
+        ["only newlines", "\n\n"],
+        ["only spaces", "   "],
+        ["tabs", "\tTOP\t"]
+    ])("prepend keeps %s verbatim", (_name, value) => {
+        const config = routeConfigSchema.parse({ caption: { prepend: value } });
+        expect(config.caption.prepend).toBe(value);
+    });
+
     // A signature is deliberately spaced or newline-separated.
     test("prepend, append and the replacement text are left alone", () => {
         const config = routeConfigSchema.parse({
@@ -220,5 +236,70 @@ describe("botTokenSchema", () => {
         expect(
             tokenIssue("abcdefghi:AAExampleTokenForTestsOnly_000000")
         ).not.toBeNull();
+    });
+});
+
+describe("blank rows versus invalid ones", () => {
+    // A row just added is unfinished, not wrong: no error until it has content.
+    test.each([
+        ["a fresh keyword", { type: "keyword", value: "", target: "text" }],
+        ["a fresh pattern", { type: "regex", pattern: "", target: "text" }],
+        ["a fresh sender", { type: "sender", ids: [], usernames: [] }]
+    ])("%s is blank, not invalid", (_name, rule) => {
+        expect(isBlankRule(rule)).toBe(true);
+    });
+
+    // Media starts with a kind selected, so an empty one is a real mistake.
+    test("a media rule with nothing ticked is invalid, not blank", () => {
+        const rule = { type: "media", kinds: [] };
+        expect(isBlankRule(rule)).toBe(false);
+        expect(ruleIssue(rule)).toBe("Pick at least one media type");
+    });
+
+    test("a filled rule is neither blank nor invalid", () => {
+        const rule = { type: "keyword", value: "sale", target: "text" };
+        expect(isBlankRule(rule)).toBe(false);
+        expect(ruleIssue(rule)).toBeNull();
+    });
+
+    test("pruneConfig drops the unfilled rows and keeps the rest", () => {
+        const config = routeConfigSchema.parse({
+            filters: {
+                whitelist: [{ type: "keyword", value: "sale", target: "text" }]
+            }
+        });
+        const withBlanks = {
+            ...config,
+            filters: {
+                whitelist: [
+                    ...config.filters.whitelist,
+                    { type: "sender", ids: [], usernames: [] } as never
+                ],
+                blacklist: []
+            },
+            caption: {
+                ...config.caption,
+                replace: [
+                    {
+                        pattern: "",
+                        replacement: "",
+                        isRegex: false,
+                        caseSensitive: true
+                    },
+                    {
+                        pattern: "a",
+                        replacement: "b",
+                        isRegex: false,
+                        caseSensitive: true
+                    }
+                ]
+            }
+        };
+
+        const pruned = pruneConfig(withBlanks);
+        expect(pruned.filters.whitelist).toHaveLength(1);
+        expect(pruned.caption.replace).toHaveLength(1);
+        // What survives must still validate.
+        expect(validateConfig(pruned).ok).toBe(true);
     });
 });

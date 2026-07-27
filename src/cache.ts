@@ -59,11 +59,11 @@ export class Cache<T> {
     private ttlMs: number;
     private maxEntries: number;
     /**
-     * Bumped by every invalidation, so a loader that started earlier is holding
+     * Bumped by every invalidation: a loader that started earlier holds
      * pre-change rows and must not repopulate the cache.
      *
-     * ponytail: one counter per namespace, not per key. An unrelated
-     * invalidation costs one extra load; per-key would need bounding.
+     * ponytail: per namespace, not per key. An unrelated invalidation costs one
+     * extra load; per-key would need bounding.
      */
     private generation = 0;
 

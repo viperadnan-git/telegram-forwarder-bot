@@ -3,12 +3,9 @@ import db from "./store";
 
 /**
  * '~' and '|' in a bot's display name used to set protected content and caption
- * stripping for every route. Tokens are not stored, so the name is read from
- * ctx.me on the bot's first message rather than by a script.
- *
- * Marked done on the bots row, not just in memory: '|' is a common name
- * separator, so a per-process guard would re-apply the flags after every
- * restart to any route still on defaults.
+ * stripping. Tokens are not stored, so the name comes from ctx.me on the first
+ * message. Marked done on the bots row, not in memory: '|' is a common name
+ * separator, so a per-process guard would re-apply the flags on every restart.
  *
  * ponytail: delete this and its call in message.ts once deployments have upgraded.
  */

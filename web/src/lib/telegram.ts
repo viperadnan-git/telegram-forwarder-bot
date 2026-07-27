@@ -7,9 +7,17 @@ type WebApp = {
     close(): void;
     isExpanded?: boolean;
     disableVerticalSwipes?(): void;
+    // Colour keys, not hex, so they keep following the user's theme.
+    setHeaderColor?(color: string): void;
+    setBackgroundColor?(color: string): void;
+    setBottomBarColor?(color: string): void;
     openTelegramLink?(url: string): void;
     HapticFeedback?: {
         notificationOccurred(t: "error" | "success" | "warning"): void;
+        impactOccurred(
+            style: "light" | "medium" | "heavy" | "rigid" | "soft"
+        ): void;
+        selectionChanged(): void;
     };
     showConfirm?(message: string, cb: (ok: boolean) => void): void;
     BackButton?: {
@@ -36,23 +44,47 @@ export function botId(): number {
 /** Display only — unsigned. Anything that matters is checked server-side. */
 export const myId = (): number | undefined => webApp?.initDataUnsafe?.user?.id;
 
+/**
+ * Version-gated methods are present on the object whatever the client's version
+ * and *throw* when called on one too old, so optional chaining is no protection.
+ * Everything optional goes through here.
+ */
+export function safely(call: () => void) {
+    try {
+        call();
+    } catch {
+        // Older client: the feature is simply absent.
+    }
+}
+
 export function init() {
     if (!webApp) return;
-    webApp.ready();
-    webApp.expand();
+    const app = webApp;
+
+    app.ready();
+    app.expand();
+
     // A long settings list would otherwise collapse the app while scrolling.
-    webApp.disableVerticalSwipes?.();
+    safely(() => app.disableVerticalSwipes?.());
+
+    // Pages sit on the grouped-list background; the header and the area behind
+    // the webview default to bg_color, which shows as a seam in most themes.
+    safely(() => app.setHeaderColor?.("secondary_bg_color"));
+    safely(() => app.setBackgroundColor?.("secondary_bg_color"));
+    safely(() => app.setBottomBarColor?.("secondary_bg_color"));
 }
 
 export const close = () => webApp?.close();
 
 /** Telegram's own back control, so the system gesture matches the in-app one. */
 export function backButton(visible: boolean) {
-    if (visible) webApp?.BackButton?.show();
-    else webApp?.BackButton?.hide();
+    safely(() =>
+        visible ? webApp?.BackButton?.show() : webApp?.BackButton?.hide()
+    );
 }
 
-export const onBackButton = (cb: () => void) => webApp?.BackButton?.onClick(cb);
+export const onBackButton = (cb: () => void) =>
+    safely(() => webApp?.BackButton?.onClick(cb));
 
 export const openTelegramLink = (url: string) => {
     if (webApp?.openTelegramLink) webApp.openTelegramLink(url);
@@ -81,9 +113,6 @@ export async function copyText(text: string): Promise<boolean> {
         }
     }
 }
-
-export const haptic = (type: "success" | "warning" | "error" = "success") =>
-    webApp?.HapticFeedback?.notificationOccurred(type);
 
 export function confirm(message: string): Promise<boolean> {
     if (!webApp?.showConfirm)

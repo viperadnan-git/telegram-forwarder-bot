@@ -24,6 +24,29 @@ describe("parseConfig", () => {
         expect(parseConfig({ mode: "nonsense", filters: 5 }).mode).toBe("copy");
     });
 
+    // A rule stored before the schema tightened must not switch the whole
+    // blacklist off, which would forward what the user asked to be dropped.
+    test("one unparseable rule is dropped, the rest of the config survives", () => {
+        const c = parseConfig({
+            mode: "forward",
+            filters: {
+                blacklist: [
+                    { type: "keyword", value: "  " },
+                    { type: "keyword", value: "spam" }
+                ]
+            },
+            caption: {
+                replace: [
+                    { pattern: "", replacement: "x" },
+                    { pattern: "a", replacement: "b" }
+                ]
+            }
+        });
+        expect(c.mode).toBe("forward");
+        expect(c.filters.blacklist).toHaveLength(1);
+        expect(c.caption.replace).toHaveLength(1);
+    });
+
     test("provided values survive", () => {
         const c = parseConfig({ mode: "forward", protectContent: true });
         expect(c.mode).toBe("forward");

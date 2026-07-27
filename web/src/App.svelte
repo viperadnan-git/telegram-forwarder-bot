@@ -1,15 +1,15 @@
 <script lang="ts">
 import { tick } from "svelte";
+import AddRoute from "./lib/AddRoute.svelte";
 import * as api from "./lib/api";
 import { ApiError } from "./lib/api";
-import ChatInput from "./lib/ChatInput.svelte";
+import ConfirmDialog from "./lib/ConfirmDialog.svelte";
 import Help from "./lib/Help.svelte";
-import Hero from "./lib/Hero.svelte";
-import Icon from "./lib/Icon.svelte";
+import { run } from "./lib/haptics";
 import NoAccess from "./lib/NoAccess.svelte";
 import Owner from "./lib/Owner.svelte";
 import RouteEditor from "./lib/RouteEditor.svelte";
-import RouteLink from "./lib/RouteLink.svelte";
+import Routes from "./lib/Routes.svelte";
 import {
     back,
     currentDepth,
@@ -21,7 +21,6 @@ import {
     push,
     replace
 } from "./lib/router";
-import Skeleton from "./lib/Skeleton.svelte";
 import {
     backButton,
     botId,
@@ -30,7 +29,7 @@ import {
     init,
     onBackButton
 } from "./lib/telegram";
-import { type Route, type RouteConfig, withDefaults } from "./lib/types";
+import type { Route, RouteConfig } from "./lib/types";
 
 let routes = $state<Route[]>([]);
 let loading = $state(true);
@@ -57,52 +56,8 @@ const view = $derived(
     loc.name === "route" || loc.name === "add" ? "settings" : loc.name
 );
 let refreshing = $state(false);
-let refreshNote = $state("");
 let confirmingRefresh = $state(false);
-
-// How many getChat calls a refresh costs.
-const chatCount = $derived(
-    new Set(routes.flatMap((r) => [r.sourceChatId, r.destChatId])).size
-);
 let starting = $state(false);
-let adding = $state(false);
-let newSource = $state("");
-let newDest = $state("");
-let sourceInput = $state<ChatInput>();
-let destInput = $state<ChatInput>();
-
-const canAdd = $derived(
-    newSource.trim() !== "" &&
-        newDest.trim() !== "" &&
-        newSource.trim() !== newDest.trim()
-);
-
-function resetManual() {
-    sourceInput?.reset();
-    destInput?.reset();
-    error = "";
-}
-
-/** Both chats are looked up here, once, rather than on every keystroke. */
-async function addManually() {
-    if (!canAdd) return;
-    adding = true;
-    error = "";
-    try {
-        const [source, dest] = await Promise.all([
-            api.resolveChat(newSource.trim()),
-            api.resolveChat(newDest.trim())
-        ]);
-        routes = [...routes, await api.createRoute(source.chatId, dest.chatId)];
-        resetManual();
-        back();
-    } catch (e: any) {
-        error = e.message;
-    } finally {
-        adding = false;
-    }
-}
-
 // The picker is a reply keyboard, which a Mini App cannot render.
 async function startSetFlow() {
     starting = true;
@@ -116,60 +71,24 @@ async function startSetFlow() {
     }
 }
 
-init();
-
-async function refresh() {
+/** Scoped to one route: two getChat calls, so no confirmation is warranted. */
+async function refresh(route: Route) {
     confirmingRefresh = false;
     refreshing = true;
-    refreshNote = "";
     error = "";
     try {
-        const result = await api.refreshChatNames();
+        // Some chats unreachable is a partial result, not a clean success.
+        const result = await run(
+            () => api.refreshChatNames([route.sourceChatId, route.destChatId]),
+            (r) => (r.failed ? "warning" : "success")
+        );
         routes = result.routes;
-        refreshNote = result.failed
-            ? `${result.updated} updated, ${result.failed} unreachable — I may have been removed from those chats.`
-            : `${result.updated} chat ${result.updated === 1 ? "name" : "names"} updated.`;
     } catch (e: any) {
         error = e.message;
     } finally {
         refreshing = false;
     }
 }
-
-const grouped = $derived(
-    [
-        ...new Map(
-            routes.map((r) => [
-                r.sourceChatId,
-                routes.filter((x) => x.sourceChatId === r.sourceChatId)
-            ])
-        )
-    ].sort(([a], [b]) => a - b)
-);
-
-/** Only non-default settings, so divergence between destinations shows. */
-function chips(route: Route): string[] {
-    const c = withDefaults(route.config);
-    const out: string[] = [];
-    if (c.mode === "forward") out.push("forward");
-    if (c.protectContent) out.push("protected");
-    if (c.silent) out.push("silent");
-    if (c.removeButtons) out.push("no buttons");
-    if (c.filters.whitelist.length)
-        out.push(`${c.filters.whitelist.length} allow`);
-    if (c.filters.blacklist.length)
-        out.push(`${c.filters.blacklist.length} block`);
-    if (c.caption.strip) out.push("no caption");
-    if (c.caption.removeLinks) out.push("no links");
-    if (c.caption.removeMentions) out.push("no mentions");
-    if (c.caption.prepend || c.caption.append) out.push("signature");
-    if (c.caption.replace.length)
-        out.push(`${c.caption.replace.length} replace`);
-    return out;
-}
-
-const plural = (n: number, one: string, many = `${one}s`) =>
-    `${n} ${n === 1 ? one : many}`;
 
 const NO_BOT =
     "Open this page from your bot so it knows which bot to configure.";
@@ -263,7 +182,7 @@ async function load() {
 }
 
 async function save(patch: { config: RouteConfig; enabled: boolean }) {
-    const updated = await api.updateRoute(editing!.id, patch);
+    const updated = await run(() => api.updateRoute(editing!.id, patch));
     routes = routes.map((r) =>
         r.id === updated.id ? { ...r, ...updated } : r
     );
@@ -272,52 +191,20 @@ async function save(patch: { config: RouteConfig; enabled: boolean }) {
 
 async function remove() {
     if (!(await confirm("Delete this destination?"))) return;
-    await api.deleteRoute(editing!.id);
+    await run(() => api.deleteRoute(editing!.id));
     routes = routes.filter((r) => r.id !== editing!.id);
     editorDirty = false;
     back();
 }
+
+// Last, so nothing in the Telegram handshake can stop the app wiring up.
+init();
 
 // Seeds history state so the first popstate knows it is back at the root.
 replace(initialLoc);
 if (needsRoutes(initialLoc)) ensureRoutes(initialLoc);
 else loading = false;
 </script>
-
-{#snippet actionRow(
-    icon: string,
-    label: string,
-    action: () => void,
-    tone = ""
-)}
-    <button type="button" class="row {tone}" onclick={action}>
-        <span class="icon"><Icon name={icon} /></span>
-        <span class="grow"><span class="row-label">{label}</span></span>
-        <span class="chevron" aria-hidden="true">›</span>
-    </button>
-{/snippet}
-
-{#snippet addSection()}
-    <h2 class="section-title">Add forwarding</h2>
-    <div class="card inset-rules">
-        {@render actionRow(
-            "plus",
-            starting ? "Opening picker…" : "Pick from a list",
-            startSetFlow,
-            "accent"
-        )}
-        {@render actionRow(
-            "plus",
-            "Enter chats yourself",
-            () => go({ name: "add" }),
-            "accent"
-        )}
-    </div>
-    <p class="note">
-        The picker lists channels where we are both administrators, and groups I
-        am in. Enter a chat yourself when it is not listed.
-    </p>
-{/snippet}
 
 {#if view === "help"}
     <Help
@@ -336,103 +223,17 @@ else loading = false;
         onclaimed={() => go({ name: "settings" })}
     />
 {:else}
-<div class="page">
-    <Hero icon="forward" title="Forwarding">
-        {#if loading}
-            &nbsp;
-        {:else if routes.length}
-            {plural(grouped.length, "source")} · {plural(
-                routes.length,
-                "destination"
-            )}
-        {:else}
-            Copy new messages from one chat into another
-        {/if}
-    </Hero>
-
-    {#if error}<p class="banner">{error}</p>{/if}
-    {#if refreshNote}<p class="note refresh-note">{refreshNote}</p>{/if}
-
-    {#if loading}
-        <Skeleton />
-    {:else if routes.length === 0}
-        <div class="empty">
-            <strong>Nothing forwarding yet</strong>
-            <p>Pick a chat to forward from, and one to forward to.</p>
-        </div>
-    {:else}
-        <div class="stagger">
-            {#each grouped as [source, dests], gi (source)}
-                <div style="animation-delay:{gi * 45}ms">
-                    <RouteLink
-                        sourceChatId={source}
-                        sourceName={dests[0].sourceName}
-                        routes={dests}
-                        {chips}
-                        onopen={(route) => go({ name: "route", id: route.id, pane: null })}
-                    />
-                </div>
-            {/each}
-        </div>
-    {/if}
-
-    {@render addSection()}
-
-    <h2 class="section-title">This bot</h2>
-    <div class="card inset-rules">
-        {@render actionRow("help", "How it works", () => go({ name: "help" }))}
-        {@render actionRow("owner", "Owner", () => go({ name: "owner" }))}
-        {#if routes.length}
-            {@render actionRow("refresh", refreshing ? "Refreshing…" : "Refresh chat names", () => (confirmingRefresh = true))}
-        {/if}
-    </div>
-    <p class="note">
-        Refreshing asks Telegram for the current name of every chat, one request
-        each.
-    </p>
-</div>
-{/if}
-
-<svelte:window
-    onkeydown={(e) => e.key === "Escape" && (confirmingRefresh = false)}
-/>
-
-{#if confirmingRefresh}
-    <div
-        class="scrim"
-        role="presentation"
-        onclick={() => (confirmingRefresh = false)}
-    >
-        <div
-            class="dialog"
-            role="dialog"
-            tabindex="-1"
-            aria-modal="true"
-            aria-labelledby="refresh-title"
-            onclick={(e) => e.stopPropagation()}
-            onkeydown={() => {}}
-        >
-            <h2 id="refresh-title">Refresh chat names?</h2>
-            <p>
-                I will ask Telegram for the current name of
-                {chatCount === 1 ? "1 chat" : `all ${chatCount} chats`}, one request
-                each.
-            </p>
-            <p>
-                Telegram limits how often a bot can do this. Refreshing repeatedly,
-                or with many chats, can get the bot temporarily rate limited — which
-                also delays forwarding.
-            </p>
-            <div class="actions">
-                <button
-                    type="button"
-                    class="btn secondary"
-                    onclick={() => (confirmingRefresh = false)}>Cancel</button
-                >
-                <button type="button" class="btn" onclick={refresh}>Refresh</button>
-            </div>
-        </div>
-    </div>
+    <Routes
+        {routes}
+        {loading}
+        {error}
+        {starting}
+        onopen={(route) => go({ name: "route", id: route.id, pane: null })}
+        onpick={startSetFlow}
+        onmanual={() => go({ name: "add" })}
+        onhelp={() => go({ name: "help" })}
+        onowner={() => go({ name: "owner" })}
+    />
 {/if}
 
 {#if editing}
@@ -449,56 +250,37 @@ else loading = false;
             onclose={back}
             ondelete={remove}
             ondirty={(d) => (editorDirty = d)}
+            onrefresh={() => (confirmingRefresh = true)}
+            {refreshing}
         />
     {/key}
+
+    {#if confirmingRefresh}
+        <ConfirmDialog
+            title="Refresh chat names?"
+            confirmLabel="Refresh"
+            oncancel={() => (confirmingRefresh = false)}
+            onconfirm={() => refresh(editing)}
+        >
+            <p>
+                I will ask Telegram for the current name of both chats in this
+                route — the source and the destination.
+            </p>
+            <p>
+                Telegram limits how often a bot can do this, so refreshing
+                repeatedly can get the bot temporarily rate limited, which also
+                delays forwarding.
+            </p>
+        </ConfirmDialog>
+    {/if}
 {/if}
 
 {#if manual}
-    <div class="sheet">
-        <div class="sheet-bar">
-            <button type="button" class="pill" onclick={back}>
-                <Icon name="back" size={16} /> Back
-            </button>
-            <span class="sheet-title">Add forwarding</span>
-            <span></span>
-        </div>
-
-        <div class="page">
-            <Hero icon="plus" title="Enter chats yourself">
-                For chats the picker will not list. I must already be in both of
-                them.
-            </Hero>
-
-            {#if error}<p class="banner">{error}</p>{/if}
-
-            <div class="card">
-                <ChatInput
-                    bind:this={sourceInput}
-                    bind:value={newSource}
-                    label="Source"
-                />
-                <ChatInput
-                    bind:this={destInput}
-                    bind:value={newDest}
-                    label="Destination"
-                />
-            </div>
-            <p class="note">
-                A chat id, an @username or a t.me link. Both are looked up when
-                you tap Add, so nothing is checked while you type. In a channel I
-                have to be an administrator.
-            </p>
-
-            <div class="actions-stack">
-                <button
-                    type="button"
-                    class="btn"
-                    disabled={!canAdd || adding}
-                    onclick={addManually}
-                >
-                    {adding ? "Adding…" : "Add forwarding"}
-                </button>
-            </div>
-        </div>
-    </div>
+    <AddRoute
+        onclose={back}
+        oncreated={(route) => {
+            routes = [...routes, route];
+            back();
+        }}
+    />
 {/if}

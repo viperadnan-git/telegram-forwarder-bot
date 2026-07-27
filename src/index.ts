@@ -42,10 +42,32 @@ app.use("/api", createApiRouter());
 
 const webDist = path.join(__dirname, "..", "web", "dist");
 if (existsSync(webDist)) {
-    app.use("/app", express.static(webDist));
-    app.get("/app/*splat", (_: Request, res: Response) => {
-        res.sendFile(path.join(webDist, "index.html"));
-    });
+    app.use(
+        "/app",
+        express.static(webDist, {
+            setHeaders(res, filePath) {
+                // Only assets/ is content-hashed. The shell and favicon.svg
+                // keep their names across builds, so they must revalidate.
+                res.setHeader(
+                    "Cache-Control",
+                    !filePath.includes(`${path.sep}assets${path.sep}`)
+                        ? "no-cache"
+                        : "public, max-age=31536000, immutable"
+                );
+            }
+        })
+    );
+
+    // A missing asset must 404, not fall through: the browser would execute the
+    // shell HTML as JavaScript and fail silently.
+    app.get(
+        "/app/*splat",
+        (req: Request, res: Response, next: NextFunction) => {
+            if (path.extname(req.path)) return next();
+            res.setHeader("Cache-Control", "no-cache");
+            res.sendFile(path.join(webDist, "index.html"));
+        }
+    );
 } else {
     logger.warn(
         `Mini App build not found at ${webDist}. Run "bun run build:web" to enable /app.`

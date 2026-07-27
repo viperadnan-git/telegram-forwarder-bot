@@ -13,7 +13,7 @@ export const hasCaptionTransform = (c: RouteConfig) =>
     c.caption.append !== undefined;
 
 /** forwardMessage relays the original untouched, so none of this can apply. */
-export const modifiesContent = (c: RouteConfig) =>
+const modifiesContent = (c: RouteConfig) =>
     hasCaptionTransform(c) || c.removeButtons;
 
 /**
@@ -101,5 +101,3 @@ export function validateConfig(raw: unknown): ValidationResult {
 
     return { ok: true, config };
 }
-
-export { compile };

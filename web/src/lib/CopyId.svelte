@@ -1,5 +1,6 @@
 <script lang="ts">
-import { copyText, haptic } from "./telegram";
+import { impact } from "./haptics";
+import { copyText } from "./telegram";
 
 let { id }: { id: number } = $props();
 
@@ -18,7 +19,7 @@ async function copy(event: MouseEvent) {
     event.stopPropagation();
     if (!(await copyText(String(id)))) return;
     copied = true;
-    haptic();
+    impact();
     clearTimeout(timer);
     timer = setTimeout(() => (copied = false), 1600);
 }
@@ -52,3 +53,25 @@ async function copy(event: MouseEvent) {
         </svg>
     {/if}
 </button>
+
+<style>
+.cid-copy {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 3px;
+    padding: 2px 0;
+    color: var(--text);
+    /* The row behind it is the control; the id must still be tappable. */
+    pointer-events: auto;
+}
+
+.cid-copy:active {
+    opacity: 0.55;
+}
+
+.cid-copy .copied {
+    font-size: 13px;
+    color: var(--accent);
+}
+</style>

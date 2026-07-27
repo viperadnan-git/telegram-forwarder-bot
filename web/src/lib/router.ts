@@ -1,4 +1,4 @@
-export type Pane = "allow" | "block" | "replace";
+export type Pane = "allow" | "block" | "replace" | "text";
 
 export type Loc =
     | {
@@ -21,7 +21,7 @@ const TOP = [
     "add"
 ] as const;
 
-const PANES: readonly string[] = ["allow", "block", "replace"];
+const PANES: readonly string[] = ["allow", "block", "replace", "text"];
 
 export function parse(path: string = location.pathname): Loc {
     const parts = path
@@ -74,8 +74,9 @@ if ("scrollRestoration" in history) history.scrollRestoration = "manual";
 type Entry = { depth: number; scrollY: number };
 
 // How many screens deep we are, so a back control only appears when there is
-// somewhere to go. Kept in history state so it survives a popstate.
-let depth = 0;
+// somewhere to go. Kept in history state so it survives a popstate — and a
+// reload, which would otherwise strand a sheet with no way back.
+let depth: number = history.state?.depth ?? 0;
 
 export const currentDepth = () => depth;
 

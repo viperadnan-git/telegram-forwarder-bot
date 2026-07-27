@@ -19,4 +19,6 @@ const sql = postgres(DATABASE_URL, {
 });
 
 export const db = drizzle(sql, { schema });
-export { schema, sql };
+
+// scripts/migrate-redis.ts needs the raw client to close the pool.
+export { sql };

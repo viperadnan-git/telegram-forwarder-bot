@@ -27,12 +27,13 @@ describe("applyCaption", () => {
         ).toEqual({ text: "", entities: [] });
     });
 
+    // Each part is its own line, so the shift is the prepend plus its newline.
     test("prepend shifts entities, append does not", () => {
-        const out = applyCaption(cap({ prepend: ">> ", append: " <<" }), {
+        const out = applyCaption(cap({ prepend: ">>", append: "<<" }), {
             text: "hello",
             entities: [bold(0, 5)]
         });
-        expect(out.text).toBe(">> hello <<");
+        expect(out.text).toBe(">>\nhello\n<<");
         expect(out.entities).toEqual([bold(3, 5)]);
     });
 
@@ -123,15 +124,14 @@ describe("applyCaption", () => {
     });
 
     test("emoji keep correct UTF-16 offsets", () => {
-        // "👍" is one code point but two UTF-16 code units, which is the unit
-        // Telegram counts in.
+        // "👍" is two UTF-16 code units, which is what Telegram counts in.
         const input = { text: "👍 hello", entities: [bold(3, 5)] };
         expect(input.text.slice(3, 8)).toBe("hello");
 
         const out = applyCaption(cap({ prepend: "ab" }), input);
-        expect(out.text).toBe("ab👍 hello");
-        expect(out.entities).toEqual([bold(5, 5)]);
-        expect(out.text.slice(5, 10)).toBe("hello");
+        expect(out.text).toBe("ab\n👍 hello");
+        expect(out.entities).toEqual([bold(6, 5)]);
+        expect(out.text.slice(6, 11)).toBe("hello");
     });
 
     test("removeLinks deletes url and text_link spans", () => {
@@ -244,8 +244,8 @@ describe("case-insensitive replacement", () => {
 });
 
 describe("case folding that changes string length", () => {
-    // "İ" (U+0130) lower-cases to two code units. Searching a lower-cased copy
-    // and slicing the original shifted every later index.
+    // "İ" (U+0130) lower-cases to two code units, so searching a lower-cased
+    // copy and slicing the original shifts every later index.
     const cfg = (over: Record<string, unknown>) =>
         cap({
             replace: [{ replacement: "OFFER", caseSensitive: false, ...over }]
@@ -284,5 +284,54 @@ describe("case folding that changes string length", () => {
                 entities: []
             }).text
         ).toBe("big OFFER here");
+    });
+});
+
+describe("prepend and append", () => {
+    // Each part goes on its own line, so a signature needs no typed newline.
+    test("parts are joined with a newline", () => {
+        expect(
+            applyCaption(cap({ prepend: "TOP", append: "Join @chan" }), {
+                text: "Body",
+                entities: []
+            }).text
+        ).toBe("TOP\nBody\nJoin @chan");
+    });
+
+    test("a missing part leaves no blank line behind", () => {
+        expect(
+            applyCaption(cap({ append: "Join @chan" }), {
+                text: "Body",
+                entities: []
+            }).text
+        ).toBe("Body\nJoin @chan");
+    });
+
+    // Uncaptioned media: the two parts must not be separated by a gap.
+    test("an empty caption does not leave a hole between the parts", () => {
+        expect(
+            applyCaption(cap({ prepend: "TOP", append: "Join @chan" }), {
+                text: "",
+                entities: []
+            }).text
+        ).toBe("TOP\nJoin @chan");
+    });
+
+    test("a multiline part keeps its own newlines", () => {
+        expect(
+            applyCaption(cap({ append: "A\nB" }), {
+                text: "Body",
+                entities: []
+            }).text
+        ).toBe("Body\nA\nB");
+    });
+
+    test("entities shift by the prepend and its newline", () => {
+        const out = applyCaption(cap({ prepend: "TOP\nLINE" }), {
+            text: "Body",
+            entities: [bold(0, 4)]
+        });
+        expect(out.text).toBe("TOP\nLINE\nBody");
+        expect(out.entities).toEqual([bold(9, 4)]);
     });
 });

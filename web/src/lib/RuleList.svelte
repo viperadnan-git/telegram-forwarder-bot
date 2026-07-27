@@ -1,13 +1,14 @@
 <script lang="ts">
-import { ruleIssue } from "$schema";
+import { isBlankRule, ruleIssue } from "$schema";
+import { selection } from "./haptics";
 import Icon from "./Icon.svelte";
+import Segmented from "./Segmented.svelte";
 import Switch from "./Switch.svelte";
 import { type MatchTarget, MEDIA_KINDS, type Rule } from "./types";
 
 let { rules = $bindable([]) }: { rules: Rule[] } = $props();
 
-// Named and described: "regex" or "sender" alone does not tell you which one
-// you want.
+// Described, not just named: "regex" or "sender" alone does not say which to pick.
 const TYPES: {
     type: Rule["type"];
     label: string;
@@ -77,65 +78,66 @@ function toggleKind(rule: Extract<Rule, { type: "media" }>, kind: string) {
     rule.kinds = rule.kinds.includes(kind as any)
         ? rule.kinds.filter((k) => k !== kind)
         : [...rule.kinds, kind as any];
+    selection();
 }
 </script>
 
 {#snippet targetPicker(rule: Extract<Rule, { target: MatchTarget }>)}
     <div class="row">
         <span class="grow"><span class="row-label">Match against</span></span>
-        <div class="segmented">
-            <button
-                type="button"
-                aria-pressed={rule.target === "text"}
-                onclick={() => (rule.target = "text")}>Text</button
-            >
-            <button
-                type="button"
-                aria-pressed={rule.target === "filename"}
-                onclick={() => (rule.target = "filename")}>File name</button
-            >
-        </div>
+        <Segmented
+            bind:value={rule.target}
+            options={[
+                { value: "text", label: "Text" },
+                { value: "filename", label: "File name" }
+            ]}
+        />
     </div>
 {/snippet}
 
 <!-- One card per rule, each with its own note, as BotFather does per setting. -->
 {#each rules as rule, i (i)}
-    {@const issue = ruleIssue(rule)}
+    {@const blank = isBlankRule(rule)}
+    {@const issue = blank ? null : ruleIssue(rule)}
     <div class="section-head">
-        <h2 class="section-title">Rule {i + 1} · {LABELS[rule.type]}</h2>
-        <button type="button" class="link destructive" onclick={() => remove(i)}>
-            Remove
+        <h2 class="section-title">
+            <span class="ordinal">#{i + 1}</span>
+            {LABELS[rule.type]}
+        </h2>
+        <button
+            type="button"
+            class="icon-btn destructive"
+            aria-label="Remove rule {i + 1}"
+            onclick={() => remove(i)}
+        >
+            <Icon name="trash" size={19} />
         </button>
     </div>
 
     <div class="card">
         {#if rule.type === "keyword"}
-            <div class="field">
-                <input
-                    class="input"
-                    type="text"
-                    bind:value={rule.value}
-                    placeholder={rule.target === "filename"
-                        ? "Part of a file name"
-                        : "Word or phrase"}
-                />
-            </div>
+            <input
+                class="input"
+                type="text"
+                bind:value={rule.value}
+                placeholder={rule.target === "filename"
+                    ? "Part of a file name"
+                    : "Word or phrase"}
+            />
             {@render targetPicker(rule)}
             <Switch bind:checked={rule.caseSensitive} label="Match case" />
         {:else if rule.type === "regex"}
-            <div class="field">
-                <input
-                    class="input mono"
-                    type="text"
-                    bind:value={rule.pattern}
-                    placeholder={rule.target === "filename"
-                        ? "\\.(mkv|avi)$"
-                        : "t\\.me/\\w+"}
-                    autocapitalize="off"
-                    autocorrect="off"
-                    spellcheck="false"
-                />
-            </div>
+            <input
+                class="input mono"
+                type="text"
+                bind:value={rule.pattern}
+                placeholder={rule.target === "filename"
+                    ? "\\.(mkv|avi)$"
+                    : "t\\.me/\\w+"}
+                autocapitalize="off"
+                autocorrect="off"
+                spellcheck="false"
+            />
             {@render targetPicker(rule)}
         {:else if rule.type === "media"}
             <div class="field">
@@ -153,22 +155,22 @@ function toggleKind(rule: Extract<Rule, { type: "media" }>, kind: string) {
                 </div>
             </div>
         {:else}
-            <div class="field">
-                <input
-                    class="input"
-                    type="text"
-                    value={senderText(rule)}
-                    oninput={(e) => setSender(rule, e.currentTarget.value)}
-                    placeholder="Ids or @usernames, comma separated"
-                    autocapitalize="off"
-                    spellcheck="false"
-                />
-            </div>
+            <input
+                class="input"
+                type="text"
+                value={senderText(rule)}
+                oninput={(e) => setSender(rule, e.currentTarget.value)}
+                placeholder="Ids or @usernames, comma separated"
+                autocapitalize="off"
+                spellcheck="false"
+            />
         {/if}
     </div>
 
     {#if issue}
         <p class="note invalid-note">{issue}</p>
+    {:else if blank}
+        <p class="note">Not filled in yet, so it is dropped when you save.</p>
     {:else if rule.type === "regex"}
         <p class="note">
             Runs on RE2, which cannot backtrack. Lookbehind and backreferences

@@ -74,7 +74,8 @@ Reachable from the chat menu button, `/settings` or `/help`. Requires
 Rules are validated as you type, against the same schema the server saves with.
 Lookbehind and backreferences are unsupported by RE2 and rejected. Text that is
 matched against is trimmed, so an invisible trailing space cannot silently stop
-a rule matching; prepended and appended text is kept exactly as typed.
+a rule matching. Prepended and appended text keeps its own newlines and goes on
+its own line, so a signature needs no blank line typed in front of it.
 
 Only the owner can open it. Everyone else lands on a page where they can paste
 their own bot's token — confirmed with `getMe` and shown for approval before

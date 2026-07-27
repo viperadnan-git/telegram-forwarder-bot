@@ -2,7 +2,9 @@
 import * as api from "./api";
 import BackBar from "./BackBar.svelte";
 import Hero from "./Hero.svelte";
-import { close, confirm, copyText, haptic, myId } from "./telegram";
+import { impact, run } from "./haptics";
+import Page from "./Page.svelte";
+import { close, confirm, copyText, myId } from "./telegram";
 
 let { onback, backLabel = "Back" }: { onback: () => void; backLabel?: string } =
     $props();
@@ -18,7 +20,7 @@ const mine = myId();
 async function copyMine() {
     if (mine === undefined || !(await copyText(String(mine)))) return;
     copied = true;
-    haptic();
+    impact();
     setTimeout(() => (copied = false), 1600);
 }
 
@@ -36,7 +38,7 @@ async function handOver() {
     busy = true;
     error = "";
     try {
-        handedTo = await api.handOver(target);
+        handedTo = await run(() => api.handOver(target));
     } catch (e: any) {
         error = e.message;
     } finally {
@@ -45,7 +47,7 @@ async function handOver() {
 }
 </script>
 
-<div class="page">
+<Page>
     {#if !handedTo}
         <BackBar {onback} label={backLabel} />
     {/if}
@@ -85,25 +87,19 @@ async function handOver() {
 
         <h2 class="section-title">Hand it over</h2>
         <div class="card">
-            <div class="field">
-                <label for="new-owner">New owner</label>
-                <input
-                    id="new-owner"
-                    class="input {/^-?\d+$/.test(input.trim()) ? 'mono' : ''} {error
-                        ? 'invalid'
-                        : ''}"
-                    type="text"
-                    bind:value={input}
-                    placeholder="User id"
-                    autocapitalize="off"
-                    autocorrect="off"
-                    spellcheck="false"
-                />
-                {#if error}
-                    <div class="sub" style="color:var(--destructive)">{error}</div>
-                {/if}
-            </div>
+            <input
+                class="input {/^-?\d+$/.test(input.trim()) ? 'mono' : ''} {error
+                    ? 'invalid'
+                    : ''}"
+                type="text"
+                bind:value={input}
+                placeholder="New owner's user id"
+                autocapitalize="off"
+                autocorrect="off"
+                spellcheck="false"
+            />
         </div>
+        {#if error}<p class="note invalid-note">{error}</p>{/if}
         <p class="note">
             Telegram only lets bots find people by numeric id — a @username will
             not work. Ask them to open this bot and tap Settings; the page shows
@@ -125,4 +121,4 @@ async function handOver() {
             hand it back.
         </p>
     {/if}
-</div>
+</Page>

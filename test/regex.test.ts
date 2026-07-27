@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { isSupportedPattern, test as matches, matchSpans } from "../src/regex";
 
-// The RE2 boundary: a bad pattern here either hangs the bot or silently
-// forwards nothing, and re2-wasm once broke matching without failing loudly.
+// The RE2 boundary: a bad pattern hangs the bot or silently forwards nothing,
+// and a swapped engine once broke matching without failing loudly.
 describe("matchSpans", () => {
     test("returns every match in order", () => {
         expect(matchSpans("a", "banana")).toEqual([

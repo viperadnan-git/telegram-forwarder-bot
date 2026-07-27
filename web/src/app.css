@@ -83,6 +83,31 @@ button {
     transition: background-color 0.4s ease-out;
 }
 
+/* A round tap target holding a glyph, sized past the icon for the thumb. */
+.icon-btn {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    margin-right: -7px;
+    border-radius: 50%;
+    color: var(--accent);
+}
+
+.icon-btn:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+.icon-btn.destructive {
+    color: var(--destructive);
+}
+
+.icon-btn.destructive:active {
+    background: color-mix(in srgb, var(--destructive) 13%, transparent);
+}
+
 .row:active,
 .drop:active,
 .btn:active,
@@ -112,12 +137,6 @@ button {
 .sheet .page > .card:first-child,
 .sheet .page > .section-title:first-child {
     margin-top: 0;
-}
-
-/* Sits inside .page, so cancel its gutter to land where the sheet bar does. */
-.topbar {
-    margin: 0 calc(var(--gutter) * -1);
-    padding: calc(var(--safe-top) + 9px) 10px 0;
 }
 
 /* --- page hero ---------------------------------------------------------- */
@@ -207,6 +226,13 @@ button {
     margin: 24px var(--gutter) 8px;
 }
 
+/* The index of a repeated section: present, but not the headline. */
+.ordinal {
+    color: var(--subtitle);
+    font-weight: 600;
+    margin-right: 2px;
+}
+
 /* A section header can carry one control, e.g. a language picker. */
 .section-head {
     display: flex;
@@ -218,17 +244,6 @@ button {
 .section-head .section-title {
     margin: 0;
     flex: 1;
-}
-
-/* The handle under a group name, as BotFather sets a bot's @username. */
-.section-sub {
-    margin: 2px var(--gutter) 8px;
-    font-size: 13px;
-    color: var(--subtitle);
-}
-
-.section-title + .section-sub {
-    margin-top: -8px;
 }
 
 .note {
@@ -251,22 +266,7 @@ button {
     color: var(--destructive);
 }
 
-.note a,
-.note .more {
-    color: var(--accent);
-    text-decoration: none;
-}
-
-/* Centred, link-bearing legal-style footer. */
-.page-footer {
-    margin: 24px var(--gutter) 0;
-    font-size: 13px;
-    line-height: 1.35;
-    text-align: center;
-    color: var(--subtitle);
-}
-
-.page-footer a {
+.note a {
     color: var(--accent);
     text-decoration: none;
 }
@@ -395,12 +395,6 @@ button {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-}
-
-.cid.small {
-    font-size: 12px;
-    color: var(--subtitle);
-    margin-top: 1px;
 }
 /* Paused routes stay listed, but must not read as live. */
 .drop.paused .chat-name,
@@ -538,31 +532,9 @@ button.chip {
     pointer-events: none;
 }
 
-.cid-copy {
-    pointer-events: auto;
-}
-
-.cid-copy {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    margin-top: 3px;
-    padding: 2px 0;
-    color: var(--text);
-}
-
 /* Chips read as status on the line below the id. */
 .link-dest .chips {
     margin-top: 5px;
-}
-
-.cid-copy:active {
-    opacity: 0.55;
-}
-
-.cid-copy .copied {
-    font-size: 13px;
-    color: var(--accent);
 }
 
 .link-dest.paused .chat-name,
@@ -576,6 +548,13 @@ button.chip {
 }
 
 /* --- cards and rows ----------------------------------------------------- */
+
+/* A card following a note, or another card, needs the same gap a section
+   header would have given it. Linkage cards space themselves. */
+.note + .card,
+.card + .card:not(.linkage) {
+    margin-top: 14px;
+}
 
 .card {
     background: var(--section);
@@ -624,20 +603,22 @@ button.chip {
     padding: 10px var(--gutter);
 }
 
-.row + .row,
-.row + .field,
-.field + .field,
-.field + .row {
+.card > * + * {
     box-shadow: inset 0 0.5px 0 var(--separator);
 }
 
+/* The rail is the connector between these; a hairline would fight it. */
+.card.linkage > * + * {
+    box-shadow: none;
+}
+
 /* Inset to align with the label when the rows above and below carry icons. */
-.card.inset-rules .row + .row {
+.card.inset-rules > * + * {
     box-shadow: none;
     position: relative;
 }
 
-.card.inset-rules .row + .row::before {
+.card.inset-rules > * + *::before {
     content: "";
     position: absolute;
     top: 0;
@@ -704,34 +685,15 @@ button.chip {
     margin-top: 12px;
 }
 
-.refresh-note {
-    margin: 0 2px 14px;
-}
-
-/* Label on the left, its remove action on the right. */
-.field-head {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 6px;
-}
-
-.field-head .field-label {
-    margin: 0;
-    flex: 1;
-}
-
 /* Two short options on one line; wraps rather than overflowing if narrow. */
 .checks {
     display: flex;
     flex-wrap: wrap;
     gap: 9px 20px;
-    margin-top: 11px;
 }
 
 /* --- form controls ------------------------------------------------------ */
 
-.field > label,
 .field-label {
     display: block;
     font-size: 11px;
@@ -743,17 +705,17 @@ button.chip {
 }
 
 .input {
+    display: block;
     width: 100%;
-    padding: 8px 11px;
+    min-height: 44px;
+    padding: 11px var(--gutter);
     font: inherit;
     font-size: 15px;
     color: var(--text);
-    background: var(--fill);
-    border: 1.5px solid transparent;
-    border-radius: 8px;
-    transition:
-        border-color 0.15s ease,
-        background 0.15s ease;
+    background: none;
+    border: 0;
+    border-radius: 0;
+    transition: background 0.15s ease;
     -webkit-appearance: none;
     appearance: none;
 }
@@ -763,10 +725,9 @@ button.chip {
     opacity: 0.8;
 }
 
+/* The caret is the focus indicator, as it is in Telegram's own fields. */
 .input:focus {
     outline: none;
-    background: var(--section);
-    border-color: var(--accent);
 }
 
 .input.mono {
@@ -774,108 +735,9 @@ button.chip {
     font-variant-numeric: tabular-nums;
 }
 
+/* No border left to colour, so the row itself carries the warning. */
 .input.invalid {
-    border-color: var(--destructive);
-}
-
-.input + .input {
-    margin-top: 8px;
-}
-
-/* The native checkbox never matches Telegram's chrome. */
-.check {
-    display: inline-flex;
-    align-items: center;
-    gap: 9px;
-    cursor: pointer;
-    font-size: 14px;
-    color: var(--subtitle);
-}
-
-.check input {
-    position: absolute;
-    opacity: 0;
-    width: 0;
-    height: 0;
-}
-
-.check .box {
-    flex: none;
-    width: 21px;
-    height: 21px;
-    border-radius: 6px;
-    border: 1.5px solid color-mix(in srgb, var(--hint) 55%, transparent);
-    background: var(--section);
-    display: grid;
-    place-items: center;
-    transition:
-        background 0.14s ease,
-        border-color 0.14s ease;
-}
-
-.check .box::after {
-    content: "";
-    width: 10px;
-    height: 5.5px;
-    border-left: 2px solid var(--button-text);
-    border-bottom: 2px solid var(--button-text);
-    transform: rotate(-45deg) scale(0.5);
-    opacity: 0;
-    transition:
-        opacity 0.14s ease,
-        transform 0.14s ease;
-    margin-top: -2px;
-}
-
-.check input:checked + .box {
-    background: var(--button);
-    border-color: var(--button);
-}
-
-.check input:checked + .box::after {
-    opacity: 1;
-    transform: rotate(-45deg) scale(1);
-}
-
-.check input:focus-visible + .box {
-    outline: 2px solid var(--accent);
-    outline-offset: 2px;
-}
-
-/* 2 + 27 + 20 + 2 = 51, so the knob lands flush at both ends. */
-.switch {
-    flex: none;
-    display: block;
-    width: 44px;
-    height: 26px;
-    border-radius: 999px;
-    background: var(--destructive);
-    box-shadow: none;
-    padding: 2px;
-    transition:
-        background 0.22s ease,
-        box-shadow 0.22s ease;
-}
-
-[aria-checked="true"] > .switch {
-    background: var(--button);
-    box-shadow: none;
-}
-
-.switch > span {
-    display: block;
-    width: 22px;
-    height: 22px;
-    border-radius: 50%;
-    background: #fff;
-    box-shadow:
-        0 3px 8px rgba(0, 0, 0, 0.15),
-        0 1px 1px rgba(0, 0, 0, 0.16);
-    transition: transform 0.22s cubic-bezier(0.32, 0.72, 0, 1);
-}
-
-[aria-checked="true"] > .switch > span {
-    transform: translateX(18px);
+    background: color-mix(in srgb, var(--destructive) 9%, transparent);
 }
 
 /* Focus belongs on the row, which is the control. */
@@ -920,21 +782,6 @@ button.chip {
     color: var(--button-text);
     font-size: 15px;
     font-weight: 600;
-}
-
-/* Two equal actions on one line, as on BotFather's token card. */
-.btn-pair {
-    display: flex;
-    gap: 12px;
-}
-
-.btn-pair .btn {
-    flex: 1;
-}
-
-.btn.solid-danger {
-    background: var(--destructive);
-    color: #fff;
 }
 
 /* Dark pill under a hero avatar: secondary, and clearly not the page action. */
@@ -998,6 +845,14 @@ button.chip {
     color: var(--destructive);
 }
 
+.site-footer .pill {
+    text-decoration: none;
+}
+
+.site-footer .pill:active {
+    background: var(--fill-strong);
+}
+
 /* --- states ------------------------------------------------------------- */
 
 .banner {
@@ -1010,37 +865,6 @@ button.chip {
     color: var(--destructive);
 }
 
-/* --- loading: shaped like the real list, so nothing jumps ---------------- */
-
-.sk {
-    background: var(--fill);
-    background-image: linear-gradient(
-        90deg,
-        transparent 0%,
-        color-mix(in srgb, var(--hint) 14%, transparent) 45%,
-        transparent 90%
-    );
-    background-size: 260% 100%;
-    background-repeat: no-repeat;
-    border-radius: 6px;
-    animation: shimmer 1.35s ease-in-out infinite;
-}
-
-.sk.node-sk {
-    width: var(--node);
-    height: var(--node);
-    border-radius: 50%;
-    flex: none;
-}
-
-.sk.dot-sk {
-    width: var(--dot);
-    height: var(--dot);
-    border-radius: 50%;
-    flex: none;
-    animation-delay: 0.1s;
-}
-
 @keyframes shimmer {
     from {
         background-position: 160% 0;
@@ -1048,16 +872,6 @@ button.chip {
     to {
         background-position: -60% 0;
     }
-}
-
-/* The shimmer is aria-hidden; this is what gets announced. */
-.sr-only {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip: rect(0 0 0 0);
-    white-space: nowrap;
 }
 
 .empty {
@@ -1137,41 +951,6 @@ button.chip {
 a {
     color: var(--accent);
     text-decoration: none;
-}
-
-/* --- dialog -------------------------------------------------------------- */
-
-.scrim {
-    position: fixed;
-    inset: 0;
-    z-index: 20;
-    display: grid;
-    place-items: center;
-    padding: var(--gutter);
-    background: rgba(0, 0, 0, 0.45);
-    animation: fade 0.16s ease;
-}
-
-.dialog {
-    width: 100%;
-    max-width: 320px;
-    padding: 20px;
-    border-radius: 15px;
-    background: var(--section);
-    animation: pop 0.2s cubic-bezier(0.32, 0.72, 0, 1);
-}
-
-.dialog h2 {
-    margin: 0 0 8px;
-    font-size: 17px;
-    font-weight: 600;
-}
-
-.dialog p {
-    margin: 0 0 10px;
-    font-size: 14px;
-    line-height: 1.45;
-    color: var(--subtitle);
 }
 
 .dialog .actions {

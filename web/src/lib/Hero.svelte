@@ -2,8 +2,7 @@
 import type { Snippet } from "svelte";
 import Icon from "./Icon.svelte";
 
-// Every screen opens with one of these; keeping it in one place is what keeps
-// their spacing and type identical.
+// Opens every screen; one place so the spacing and type stay identical.
 let {
     icon,
     title,

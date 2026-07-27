@@ -227,3 +227,36 @@ describe("filename matching (issue #1)", () => {
         expect(passes(c, doc("notes.txt"))).toBe(true);
     });
 });
+
+describe("sender username normalisation", () => {
+    const msg = {
+        from: { id: 7, username: "Someone" },
+        text: "hi"
+    } as unknown as Message;
+
+    // The @, the case and any stray whitespace are all normalised, so a rule
+    // matches however the owner happened to type or paste the username.
+    test.each([
+        ["as typed", "Someone"],
+        ["with an @", "@someone"],
+        ["leading space", " someone"],
+        ["trailing space", "someone "],
+        ["all three", " @Someone "]
+    ])("matches %s", (_name, username) => {
+        const config = parseConfig({
+            filters: {
+                blacklist: [{ type: "sender", ids: [], usernames: [username] }]
+            }
+        });
+        expect(passes(config, msg)).toBe(false);
+    });
+
+    test("a different username is left alone", () => {
+        const config = parseConfig({
+            filters: {
+                blacklist: [{ type: "sender", ids: [], usernames: ["nobody"] }]
+            }
+        });
+        expect(passes(config, msg)).toBe(true);
+    });
+});

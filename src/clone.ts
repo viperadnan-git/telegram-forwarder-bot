@@ -59,11 +59,7 @@ export async function describeBot(
     }
 }
 
-/**
- * getMe carries no photo, so this asks getChat and inlines the bytes. Best
- * effort: a bot with no picture, or a slow file server, must not block the
- * confirmation step.
- */
+/** getMe carries no photo. Best effort: never blocks the confirmation step. */
 async function avatar(
     api: Api,
     token: string,

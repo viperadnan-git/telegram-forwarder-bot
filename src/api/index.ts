@@ -15,9 +15,8 @@ import { verifyInitData } from "./auth";
 
 type AuthedRequest = Request & { botId: number; userId: number };
 
-// Telegram mints initData once when the app opens and never refreshes it, so
-// this bounds a whole session, not a single request. Too short and a long edit
-// fails on save.
+// initData is minted once per app launch and never refreshed, so this bounds a
+// whole session: too short and a long edit fails on save.
 const MAX_INITDATA_AGE_SECONDS =
     Number(process.env.INITDATA_MAX_AGE_SECONDS) || 86_400;
 
@@ -200,7 +199,15 @@ export function createApiRouter(): Router {
                 return;
             }
 
-            const ids = await db.referencedChatIds(req.botId);
+            // Narrowed to the caller's own chats: a requested id that this bot
+            // does not forward is ignored rather than looked up.
+            const owned = await db.referencedChatIds(req.botId);
+            const asked = Array.isArray(req.body?.chatIds)
+                ? req.body.chatIds.map(Number)
+                : undefined;
+            const ids = asked
+                ? owned.filter((id) => asked.includes(id))
+                : owned;
             let updated = 0;
             let failed = 0;
 

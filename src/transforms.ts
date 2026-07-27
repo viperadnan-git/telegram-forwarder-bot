@@ -66,10 +66,9 @@ function literalEdits(
     replacement: string,
     caseSensitive: boolean
 ): Edit[] {
-    // Case folding can change a string's length — "\u0130" lowercases to two code
-    // units — which would shift every later index away from the original text
-    // the entity maths is indexed against. RE2 folds while matching the
-    // original, so the spans stay true.
+    // Case folding can change length ("\u0130" lowercases to two code units),
+    // shifting every later index away from the text the entity maths uses. RE2
+    // folds while matching the original, so the spans stay true.
     if (!caseSensitive) {
         return regexEdits(text, escapeLiteral(needle), replacement, false);
     }
@@ -174,18 +173,17 @@ export function applyCaption(
         out = applyEdit(out, edit);
     }
 
-    if (caption.prepend) {
-        const shift = caption.prepend.length;
+    const { prepend, append } = caption;
+    if (prepend || append) {
+        // Each part on its own line; empty parts are dropped, not left as a
+        // blank line — uncaptioned media otherwise leads with a gap.
+        const shift = prepend && out.text ? prepend.length + 1 : 0;
         out = {
-            text: caption.prepend + out.text,
-            entities: out.entities.map((e) => ({
-                ...e,
-                offset: e.offset + shift
-            }))
+            text: [prepend, out.text, append].filter(Boolean).join("\n"),
+            entities: shift
+                ? out.entities.map((e) => ({ ...e, offset: e.offset + shift }))
+                : out.entities
         };
-    }
-    if (caption.append) {
-        out = { text: out.text + caption.append, entities: out.entities };
     }
 
     return out;

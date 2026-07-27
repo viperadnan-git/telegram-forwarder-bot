@@ -137,5 +137,3 @@ privateChat.on("msg:text").filter(
 );
 
 composer.on("msg", message_handler);
-
-export default composer;

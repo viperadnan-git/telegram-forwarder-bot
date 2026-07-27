@@ -57,10 +57,12 @@ const mediaRule = z.object({
 const senderRule = z.object({
     type: z.literal("sender"),
     ids: z.array(z.number().int()).default([]),
-    usernames: z.array(z.string().min(1)).default([])
+    // Matching strips the @ and lower-cases; whitespace has to go too, or the
+    // rule silently matches nothing.
+    usernames: z.array(z.string().trim().min(1)).default([])
 });
 
-export const ruleSchema = z.discriminatedUnion("type", [
+const ruleSchema = z.discriminatedUnion("type", [
     keywordRule,
     regexRule,
     mediaRule,
@@ -126,9 +128,8 @@ export type RouteConfig = z.infer<typeof routeConfigSchema>;
 export type Rule = z.infer<typeof ruleSchema>;
 
 /**
- * A cheap check for the RE2 limits, so the editor can flag a pattern while it
- * is being typed. Only inspects the pattern text — compiling it needs the
- * regex engine, which stays on the server, and validateConfig is authoritative.
+ * Text-only check for the RE2 limits, for live editor feedback. Compiling needs
+ * the server's regex engine, so validateConfig stays authoritative.
  */
 export function patternHint(pattern: string): string | null {
     if (/\(\?<[=!]/.test(pattern)) {
@@ -155,6 +156,44 @@ export function tokenIssue(raw: string): string | null {
     if (raw.trim() === "") return null;
     const parsed = botTokenSchema.safeParse(raw);
     return parsed.success ? null : parsed.error.issues[0].message;
+}
+
+/**
+ * Added but not filled in yet: no error, dropped on save rather than blocking
+ * it. A media rule is never blank — it starts with a kind selected, so an empty
+ * one is a deliberate mistake.
+ */
+export function isBlankRule(rule: unknown): boolean {
+    const r = rule as Record<string, unknown>;
+    if (r?.type === "keyword") return String(r.value ?? "").trim() === "";
+    if (r?.type === "regex") return String(r.pattern ?? "").trim() === "";
+    if (r?.type === "sender") {
+        return (
+            (r.ids as unknown[] | undefined)?.length === 0 &&
+            (r.usernames as unknown[] | undefined)?.length === 0
+        );
+    }
+    return false;
+}
+
+export const isBlankReplacement = (rule: unknown): boolean =>
+    String((rule as { pattern?: unknown })?.pattern ?? "").trim() === "";
+
+/** Drops the rows the user never filled in, so they cannot fail validation. */
+export function pruneConfig(config: RouteConfig): RouteConfig {
+    return {
+        ...config,
+        filters: {
+            whitelist: config.filters.whitelist.filter((r) => !isBlankRule(r)),
+            blacklist: config.filters.blacklist.filter((r) => !isBlankRule(r))
+        },
+        caption: {
+            ...config.caption,
+            replace: config.caption.replace.filter(
+                (r) => !isBlankReplacement(r)
+            )
+        }
+    };
 }
 
 /** What is wrong with a single rule, in the words the user should read. */
@@ -197,8 +236,46 @@ export const withDefaults = (config: Partial<RouteConfig>): RouteConfig => {
     };
 };
 
+const keep = (schema: z.ZodTypeAny, items: unknown) =>
+    Array.isArray(items)
+        ? items.filter((item) => schema.safeParse(item).success)
+        : items;
+
+/**
+ * Drops the entries that will not parse, keeping the rest. A rule stored under
+ * an older, looser schema must not take every other filter down with it.
+ */
+function salvage(raw: any) {
+    if (!raw || typeof raw !== "object") return raw;
+    const { filters, caption } = raw;
+    return {
+        ...raw,
+        ...(filters && typeof filters === "object"
+            ? {
+                  filters: {
+                      ...filters,
+                      whitelist: keep(ruleSchema, filters.whitelist),
+                      blacklist: keep(ruleSchema, filters.blacklist)
+                  }
+              }
+            : {}),
+        ...(caption && typeof caption === "object"
+            ? {
+                  caption: {
+                      ...caption,
+                      replace: keep(replaceSchema, caption.replace)
+                  }
+              }
+            : {})
+    };
+}
+
 /** Never throws: a corrupt config falls back to defaults rather than going dark. */
 export function parseConfig(raw: unknown): RouteConfig {
     const parsed = routeConfigSchema.safeParse(raw ?? {});
-    return parsed.success ? parsed.data : routeConfigSchema.parse({});
+    if (parsed.success) return parsed.data;
+
+    // Failing open on the whole config would silently switch a blacklist off.
+    const salvaged = routeConfigSchema.safeParse(salvage(raw));
+    return salvaged.success ? salvaged.data : routeConfigSchema.parse({});
 }

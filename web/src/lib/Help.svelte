@@ -1,7 +1,9 @@
 <script lang="ts">
 import BackBar from "./BackBar.svelte";
 import Hero from "./Hero.svelte";
-import { botId, copyText, haptic } from "./telegram";
+import { impact } from "./haptics";
+import Page from "./Page.svelte";
+import { botId, copyText } from "./telegram";
 
 let { onback, backLabel = "Back" }: { onback: () => void; backLabel?: string } =
     $props();
@@ -15,7 +17,7 @@ const appUrl = botId() ? `${location.origin}/app/settings?bot=${botId()}` : "";
 async function copyUrl() {
     if (!(await copyText(appUrl))) return;
     copied = true;
-    haptic();
+    impact();
     setTimeout(() => (copied = false), 1600);
 }
 
@@ -109,7 +111,7 @@ const faq = [
 ];
 </script>
 
-<div class="page">
+<Page footer>
     <BackBar {onback} label={backLabel} />
 
     <Hero icon="help" title="Help">
@@ -309,15 +311,4 @@ const faq = [
         {/each}
     </div>
 
-    <p class="note">
-        <a href="https://github.com/viperadnan-git/telegram-forwarder-bot"
-            >Source code</a
-        >
-        · <a href="https://t.me/vipercommunity">Support group</a>
-        ·
-        <a
-            href="https://github.com/viperadnan-git/telegram-forwarder-bot/issues"
-            >Report a problem</a
-        >
-    </p>
-</div>
+</Page>

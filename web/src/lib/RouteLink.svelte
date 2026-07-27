@@ -3,9 +3,8 @@ import CopyId from "./CopyId.svelte";
 import Icon from "./Icon.svelte";
 import type { Route } from "./types";
 
-// One source feeding many destinations. The source is stated once and the rail
-// runs down through every destination, so the linkage is the component rather
-// than something the reader infers from adjacent rows.
+// One source feeding many destinations: stated once, with a rail running down
+// through each, so the linkage is drawn rather than inferred.
 let {
     sourceChatId,
     sourceName,
@@ -33,7 +32,7 @@ let {
         </span>
     </div>
 
-    {#each routes as route (route.id)}
+    {#each routes as route, i (route.id)}
         {@const tags = chips?.(route) ?? []}
         <div class="link-dest" class:paused={!route.enabled}>
             {#if onopen}
@@ -46,6 +45,10 @@ let {
                 ></button>
             {/if}
             <span class="link-rail" aria-hidden="true"></span>
+            {#if i < routes.length - 1}
+                <!-- Carries the line on to the next destination. -->
+                <span class="link-rail down" aria-hidden="true"></span>
+            {/if}
             <span class="link-node">
                 <Icon name="arrow" size={13} stroke={2.4} />
             </span>

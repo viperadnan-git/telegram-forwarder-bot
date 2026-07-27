@@ -15,11 +15,10 @@ export function mediaKind(msg: Message): MediaKind {
     return "text";
 }
 
-export const messageText = (msg: Message): string =>
-    msg.text ?? msg.caption ?? "";
+const messageText = (msg: Message): string => msg.text ?? msg.caption ?? "";
 
 /** Attachment file name, for rules targeting names and extensions. */
-export const messageFileName = (msg: Message): string =>
+const messageFileName = (msg: Message): string =>
     msg.document?.file_name ??
     msg.video?.file_name ??
     msg.audio?.file_name ??

@@ -87,20 +87,20 @@ describe("single message dispatch", () => {
 
     test("media with a caption transform uses copyMessage with a new caption", async () => {
         const { api, calls } = stubApi();
-        await deliver(api, route({ caption: { append: " [x]" } }), SRC, [
+        await deliver(api, route({ caption: { append: "[x]" } }), SRC, [
             photoMsg("a caption")
         ]);
         expect(calls[0].method).toBe("copyMessage");
-        expect(calls[0].args[3].caption).toBe("a caption [x]");
+        expect(calls[0].args[3].caption).toBe("a caption\n[x]");
     });
 
     test("text with a transform uses sendMessage, since copyMessage cannot alter text", async () => {
         const { api, calls } = stubApi();
-        await deliver(api, route({ caption: { prepend: ">> " } }), SRC, [
+        await deliver(api, route({ caption: { prepend: ">>" } }), SRC, [
             textMsg("hello")
         ]);
         expect(calls[0].method).toBe("sendMessage");
-        expect(calls[0].args[1]).toBe(">> hello");
+        expect(calls[0].args[1]).toBe(">>\nhello");
     });
 
     test("stripping a text message sends nothing", async () => {
@@ -170,7 +170,7 @@ describe("album dispatch", () => {
         expect(media[0]).toMatchObject({
             type: "photo",
             media: "F1",
-            caption: "cap!"
+            caption: "cap\n!"
         });
         // Uncaptioned parts stay uncaptioned; an append must not stamp every image.
         expect(media[1].caption).toBeUndefined();
@@ -288,7 +288,7 @@ describe("removeButtons", () => {
             SRC,
             [withButtons()]
         );
-        expect(calls[0].args[3].caption).toBe("cap!");
+        expect(calls[0].args[3].caption).toBe("cap\n!");
         expect(calls[0].args[3].reply_markup).toBeUndefined();
     });
 
@@ -302,7 +302,7 @@ describe("removeButtons", () => {
         } as Message;
         await deliver(
             api,
-            route({ removeButtons: true, caption: { prepend: "> " } }),
+            route({ removeButtons: true, caption: { prepend: ">" } }),
             SRC,
             [msg]
         );
