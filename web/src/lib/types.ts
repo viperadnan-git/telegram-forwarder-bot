@@ -1,11 +1,15 @@
 export {
     defaultConfig,
+    isStopped,
     MATCH_TARGETS,
     type MatchTarget,
     MEDIA_KINDS,
     type MediaKind,
+    ROUTE_STATUS,
     type RouteConfig,
+    type RouteStatus,
     type Rule,
+    statusLabel,
     withDefaults
 } from "$schema";
 
@@ -17,10 +21,13 @@ export type Route = {
     id: string;
     sourceChatId: number;
     destChatId: number;
-    enabled: boolean;
+    // "active" | "paused" | a stop reason.
+    status: string;
+    forwarded: number;
+    lastForwardedAt?: string | null;
     config: Partial<RouteConfig>;
-    sourceName?: string;
-    destName?: string;
+    sourceName: string;
+    destName: string;
     updatedAt?: string;
 };
 

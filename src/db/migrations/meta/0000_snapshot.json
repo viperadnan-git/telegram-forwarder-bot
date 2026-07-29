@@ -1,5 +1,5 @@
 {
-  "id": "3503f03a-8f21-4a29-a1c3-f72d9e0610c6",
+  "id": "e25d65f7-631e-4a5b-8518-5383072a13a8",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -50,21 +50,20 @@
           "name": "title",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": "'Unnamed chat'"
+          "notNull": true
         },
         "username": {
           "name": "username",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": "'unknown'"
+          "notNull": false
         },
         "type": {
           "name": "type",
-          "type": "text",
+          "type": "chat_type",
+          "typeSchema": "public",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
         "updated_at": {
           "name": "updated_at",
@@ -76,6 +75,53 @@
       },
       "indexes": {},
       "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.route_stats": {
+      "name": "route_stats",
+      "schema": "",
+      "columns": {
+        "route_id": {
+          "name": "route_id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "forwarded": {
+          "name": "forwarded",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "last_forwarded_at": {
+          "name": "last_forwarded_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "route_stats_route_id_fkey": {
+          "name": "route_stats_route_id_fkey",
+          "tableFrom": "route_stats",
+          "tableTo": "routes",
+          "columnsFrom": [
+            "route_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
@@ -110,12 +156,13 @@
           "primaryKey": false,
           "notNull": true
         },
-        "enabled": {
-          "name": "enabled",
-          "type": "boolean",
+        "status": {
+          "name": "status",
+          "type": "route_status",
+          "typeSchema": "public",
           "primaryKey": false,
           "notNull": true,
-          "default": true
+          "default": "'active'"
         },
         "config": {
           "name": "config",
@@ -140,8 +187,8 @@
         }
       },
       "indexes": {
-        "routes_lookup_idx": {
-          "name": "routes_lookup_idx",
+        "routes_bot_id_source_chat_id_idx": {
+          "name": "routes_bot_id_source_chat_id_idx",
           "columns": [
             {
               "expression": "bot_id",
@@ -157,15 +204,15 @@
             }
           ],
           "isUnique": false,
-          "where": "\"routes\".\"enabled\"",
+          "where": "\"routes\".\"status\" = 'active'",
           "concurrently": false,
           "method": "btree",
           "with": {}
         }
       },
       "foreignKeys": {
-        "routes_bot_id_bots_bot_id_fk": {
-          "name": "routes_bot_id_bots_bot_id_fk",
+        "routes_bot_id_fkey": {
+          "name": "routes_bot_id_fkey",
           "tableFrom": "routes",
           "tableTo": "bots",
           "columnsFrom": [
@@ -177,8 +224,8 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "routes_source_chat_id_chats_chat_id_fk": {
-          "name": "routes_source_chat_id_chats_chat_id_fk",
+        "routes_source_chat_id_fkey": {
+          "name": "routes_source_chat_id_fkey",
           "tableFrom": "routes",
           "tableTo": "chats",
           "columnsFrom": [
@@ -190,8 +237,8 @@
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
-        "routes_dest_chat_id_chats_chat_id_fk": {
-          "name": "routes_dest_chat_id_chats_chat_id_fk",
+        "routes_dest_chat_id_fkey": {
+          "name": "routes_dest_chat_id_fkey",
           "tableFrom": "routes",
           "tableTo": "chats",
           "columnsFrom": [
@@ -217,11 +264,43 @@
         }
       },
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "routes_no_self_forward_check": {
+          "name": "routes_no_self_forward_check",
+          "value": "\"routes\".\"source_chat_id\" <> \"routes\".\"dest_chat_id\""
+        }
+      },
       "isRLSEnabled": false
     }
   },
-  "enums": {},
+  "enums": {
+    "public.chat_type": {
+      "name": "chat_type",
+      "schema": "public",
+      "values": [
+        "private",
+        "group",
+        "supergroup",
+        "channel"
+      ]
+    },
+    "public.route_status": {
+      "name": "route_status",
+      "schema": "public",
+      "values": [
+        "active",
+        "paused",
+        "removed",
+        "blocked",
+        "no_rights",
+        "not_admin",
+        "gone",
+        "deactivated",
+        "is_bot",
+        "never_messaged"
+      ]
+    }
+  },
   "schemas": {},
   "sequences": {},
   "roles": {},

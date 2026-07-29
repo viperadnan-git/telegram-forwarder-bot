@@ -3,8 +3,10 @@ import type {
     ReplyKeyboardMarkup
 } from "grammy/types";
 import { type BotContext, miniAppUrl } from "../bot";
+import { checkChatId } from "../forwarding/health";
 import logger from "../lib/logger";
-import { escapeHtml } from "../lib/utils";
+import { chatTitle, escapeHtml } from "../lib/utils";
+import { checkLabel } from "../schema";
 import db from "../store";
 
 /**
@@ -145,48 +147,49 @@ export async function startPicker(ctx: BotContext) {
     );
 }
 
-/** Picker filters are client-side only, so confirm the bot can reach the chat. */
-async function reachable(ctx: BotContext, chatId: number) {
-    try {
-        await ctx.api.getChat(chatId);
-        return true;
-    } catch (err: any) {
-        logger.info(
-            `Picked chat ${chatId} is unreachable: ${err.description ?? err.message}`
-        );
-        return false;
-    }
-}
-
 export default async function chat_shared_handler(ctx: BotContext) {
     const shared = ctx.msg?.chat_shared;
     const userId = ctx.from?.id;
     if (!shared || !userId) return;
 
     const name = shared.title ?? shared.username ?? String(shared.chat_id);
+    const isSource =
+        shared.request_id === REQUEST.SOURCE_CHANNEL ||
+        shared.request_id === REQUEST.SOURCE_GROUP;
 
-    if (!(await reachable(ctx, shared.chat_id))) {
+    // The keyboard's rights filter is client-side only.
+    const check = await checkChatId(
+        ctx.api,
+        ctx.me.id,
+        shared.chat_id,
+        isSource ? "source" : "destination"
+    );
+    if (!check.ok) {
+        logger.info(`Picked chat ${shared.chat_id}: ${check.reason}`);
         await ctx.reply(
-            `I cannot reach <b>${escapeHtml(name)}</b>. Add me there first ` +
-                "— as an administrator, if it is a channel — then send /set again.",
+            `<b>${escapeHtml(name)}</b> will not work: ` +
+                `${escapeHtml(checkLabel(check.reason))}. Fix that, then send /set again.`,
             { reply_markup: { remove_keyboard: true } }
         );
         return;
     }
 
-    await db
-        .saveChat({
-            chatId: shared.chat_id,
-            title: shared.title,
-            username: shared.username
-        })
-        .catch((err) =>
-            logger.warn(`Could not save chat name: ${err.message}`)
-        );
-
-    const isSource =
-        shared.request_id === REQUEST.SOURCE_CHANNEL ||
-        shared.request_id === REQUEST.SOURCE_GROUP;
+    // chat_shared has no type, and no title unless request_title was granted.
+    // Not swallowed: the route FKs to this row.
+    try {
+        await db.saveChat({
+            chatId: check.chat.id,
+            title: chatTitle(check.chat),
+            username: check.chat.username,
+            type: check.chat.type
+        });
+    } catch (err: any) {
+        logger.error(`Could not save chat ${check.chat.id}: ${err.message}`);
+        await ctx.reply("Something went wrong. Send /set to start again.", {
+            reply_markup: { remove_keyboard: true }
+        });
+        return;
+    }
 
     if (isSource) {
         pending.set(key(ctx.me.id, userId), {

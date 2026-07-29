@@ -21,7 +21,7 @@ async function dispatch(api: Api, botId: number, parts: Message[]) {
             routes.map((r) => r.destChatId).join(",")
     );
 
-    await fanOut(api, routes, sourceChatId, parts);
+    await fanOut(api, botId, routes, sourceChatId, parts);
 }
 
 // Shared by every bot here; the buffer key includes the bot id.
@@ -34,6 +34,15 @@ const albums = new AlbumBuffer<Api>((botId, parts, api) => {
 export default async function message_handler(ctx: BotContext) {
     const message = (ctx.message ?? ctx.channelPost) as Message | undefined;
     if (!message) return;
+
+    // The only notice of a source migrating; no delivery fails to catch it.
+    if (message.migrate_to_chat_id) {
+        logger.info(
+            `Chat ${message.chat.id} migrated to ${message.migrate_to_chat_id}`
+        );
+        await db.migrateChat(message.chat.id, message.migrate_to_chat_id);
+        return;
+    }
 
     if (isAlbumPart(message)) {
         albums.add(ctx.me.id, message, ctx.api);

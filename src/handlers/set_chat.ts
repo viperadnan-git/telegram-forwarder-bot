@@ -1,5 +1,5 @@
 import type { BotContext } from "../bot";
-import { escapeHtml, resolveChat } from "../lib/utils";
+import { chatTitle, escapeHtml, resolveChat } from "../lib/utils";
 import db from "../store";
 import { startPicker } from "./pick";
 
@@ -38,15 +38,21 @@ export default async function set_chat_handler(ctx: BotContext) {
         return;
     }
 
-    await db.setChatMap(ctx.me.id, source.chat.id, dest.chat.id);
+    if (source.chat.id === dest.chat.id) {
+        await ctx.reply("A chat cannot forward to itself.");
+        return;
+    }
+
+    // Both chats first: the route FKs to them, and nothing creates them now.
     for (const c of [source.chat, dest.chat]) {
         await db.saveChat({
             chatId: c.id,
-            title: "title" in c ? c.title : undefined,
-            username: "username" in c ? c.username : undefined,
+            title: chatTitle(c),
+            username: c.username,
             type: c.type
         });
     }
+    await db.setChatMap(ctx.me.id, source.chat.id, dest.chat.id);
 
     await ctx.reply(
         `Forwarding <b>${escapeHtml(source.chat.title ?? String(source.chat.id))}</b> → ` +

@@ -1,24 +1,29 @@
 <script lang="ts">
 import type { Snippet } from "svelte";
 
+// A question when given oncancel, a message to acknowledge when not: the one
+// button dismisses, and so do Escape and the scrim.
 let {
     title,
-    confirmLabel = "Confirm",
+    confirmLabel,
     oncancel,
     onconfirm,
     children
 }: {
     title: string;
     confirmLabel?: string;
-    oncancel: () => void;
+    oncancel?: () => void;
     onconfirm: () => void;
     children: Snippet;
 } = $props();
+
+const label = $derived(confirmLabel ?? (oncancel ? "Confirm" : "OK"));
+const dismiss = () => (oncancel ?? onconfirm)();
 </script>
 
-<svelte:window onkeydown={(e) => e.key === "Escape" && oncancel()} />
+<svelte:window onkeydown={(e) => e.key === "Escape" && dismiss()} />
 
-<div class="scrim" role="presentation" onclick={oncancel}>
+<div class="scrim" role="presentation" onclick={dismiss}>
     <!-- Stops a tap inside the dialog reaching the dismiss handler above. -->
     <div
         class="dialog"
@@ -32,11 +37,13 @@ let {
         <h2>{title}</h2>
         {@render children()}
         <div class="actions">
-            <button type="button" class="btn secondary" onclick={oncancel}>
-                Cancel
-            </button>
+            {#if oncancel}
+                <button type="button" class="btn secondary" onclick={oncancel}>
+                    Cancel
+                </button>
+            {/if}
             <button type="button" class="btn" onclick={onconfirm}>
-                {confirmLabel}
+                {label}
             </button>
         </div>
     </div>

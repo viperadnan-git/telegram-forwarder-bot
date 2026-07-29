@@ -6,6 +6,7 @@ import cancel_handler from "./handlers/cancel";
 import get_chat_handler from "./handlers/get_chat";
 import help_handler from "./handlers/help";
 import message_handler from "./handlers/message";
+import my_chat_member_handler from "./handlers/my_chat_member";
 import owner_only from "./handlers/owner_only";
 import chat_shared_handler from "./handlers/pick";
 import rem_chat_handler from "./handlers/rem_chat";
@@ -137,3 +138,11 @@ privateChat.on("msg:text").filter(
 );
 
 composer.on("msg", message_handler);
+
+// No wrapper: it replies to the chat, and this fires for chats the bot has
+// just been thrown out of.
+composer.on("my_chat_member", (ctx) =>
+    my_chat_member_handler(ctx).catch((err) =>
+        logger.error(`my_chat_member failed: ${err.message}`)
+    )
+);

@@ -451,6 +451,12 @@ button.chip {
     color: var(--subtitle);
 }
 
+/* Stopped by a failure, so it must not read as the owner's "paused". */
+.chip.stopped {
+    background: color-mix(in srgb, var(--destructive) 13%, transparent);
+    color: var(--destructive);
+}
+
 .chevron {
     flex: none;
     color: var(--hint);

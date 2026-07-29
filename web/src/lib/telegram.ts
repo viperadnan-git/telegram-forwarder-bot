@@ -19,7 +19,6 @@ type WebApp = {
         ): void;
         selectionChanged(): void;
     };
-    showConfirm?(message: string, cb: (ok: boolean) => void): void;
     BackButton?: {
         show(): void;
         hide(): void;
@@ -112,10 +111,4 @@ export async function copyText(text: string): Promise<boolean> {
             return false;
         }
     }
-}
-
-export function confirm(message: string): Promise<boolean> {
-    if (!webApp?.showConfirm)
-        return Promise.resolve(globalThis.confirm(message));
-    return new Promise((resolve) => webApp.showConfirm?.(message, resolve));
 }

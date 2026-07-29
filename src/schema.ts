@@ -3,6 +3,41 @@ import { z } from "zod";
 // Shared with the Mini App, so nothing here may import the regex engine:
 // it would end up in the browser bundle.
 
+/**
+ * A route's whole state in one field. Codes rather than sentences, so the
+ * wording can change without rewriting rows.
+ */
+export const ROUTE_STATUS = {
+    active: "Forwarding",
+    paused: "Paused by you",
+    removed: "I was removed from this chat",
+    blocked: "This person blocked me",
+    no_rights: "I am not allowed to post here",
+    not_admin: "I need to be an administrator in this chat",
+    gone: "This chat no longer exists, or I was never added",
+    deactivated: "This account was deleted",
+    is_bot: "I cannot forward to another bot",
+    never_messaged: "This person has never messaged me"
+} as const;
+
+export type RouteStatus = keyof typeof ROUTE_STATUS;
+
+export const isStopped = (status: string): status is RouteStatus =>
+    status !== "active" && status !== "paused" && status in ROUTE_STATUS;
+
+export const statusLabel = (status: string) =>
+    ROUTE_STATUS[status as RouteStatus] ?? "Stopped";
+
+/** Not storable: Telegram did not answer, so nothing about the chat is known. */
+export const CHECK_LABEL = {
+    ...ROUTE_STATUS,
+    unavailable: "I could not reach Telegram just now — try again"
+} as const;
+
+export type CheckFailure = keyof typeof CHECK_LABEL;
+
+export const checkLabel = (reason: CheckFailure) => CHECK_LABEL[reason];
+
 export const MEDIA_KINDS = [
     "text",
     "photo",

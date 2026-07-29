@@ -27,6 +27,7 @@ function stubApi() {
 
 const SRC = -1001;
 const route = (config: unknown = {}): Route => ({
+    id: "00000000-0000-7000-8000-000000000000",
     destChatId: -2002,
     config: config as any
 });
@@ -238,10 +239,11 @@ describe("fanOut", () => {
 
         await fanOut(
             api,
+            1,
             [
-                { destChatId: -1, config: {} },
-                { destChatId: -2, config: {} },
-                { destChatId: -3, config: {} }
+                { ...route(), destChatId: -1 },
+                { ...route(), destChatId: -2 },
+                { ...route(), destChatId: -3 }
             ],
             SRC,
             [photoMsg()]

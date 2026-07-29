@@ -3,8 +3,9 @@ import * as api from "../api";
 import BackBar from "../components/BackBar.svelte";
 import Hero from "../components/Hero.svelte";
 import Page from "../components/Page.svelte";
+import { ask } from "../dialog.svelte";
 import { impact, run } from "../haptics";
-import { close, confirm, copyText, myId } from "../telegram";
+import { close, copyText, myId } from "../telegram";
 
 let { onback, backLabel = "Back" }: { onback: () => void; backLabel?: string } =
     $props();
@@ -28,8 +29,10 @@ async function handOver() {
     const target = input.trim();
     if (!target) return;
     if (
-        !(await confirm(
-            `Hand this bot to ${target}?\n\nYou lose access immediately. Only they can hand it back.`
+        !(await ask(
+            `Hand this bot to ${target}?`,
+            "You lose access immediately. Only they can hand it back.",
+            "Hand over"
         ))
     ) {
         return;

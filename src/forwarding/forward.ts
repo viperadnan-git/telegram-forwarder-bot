@@ -8,12 +8,17 @@ import type {
 } from "grammy/types";
 import { hasCaptionTransform, parseConfig, type RouteConfig } from "../config";
 import logger from "../lib/logger";
-import type { Route } from "../store";
+import db, { type Route } from "../store";
+import { counted } from "./counter";
 import { passes } from "./filters";
+import { checkChatId, classify } from "./health";
 import { applyCaption, clamp, type TextAndEntities } from "./transforms";
 
 const TEXT_LIMIT = 4096;
 const CAPTION_LIMIT = 1024;
+
+/** Called with the count actually delivered, never with a filtered one. */
+type OnSent = (count: number) => void;
 
 const isTextMessage = (msg: Message) => msg.text !== undefined;
 
@@ -69,9 +74,8 @@ function transformed(
 ): TextAndEntities {
     const input = contentOf(msg);
     const out = clamp(applyCaption(config.caption, input), limit);
-    // A caption rule that quietly does nothing is hard to diagnose from the
-    // outside. Only the no-op case is worth a line, and only its length: this
-    // instance hosts other people's bots and the text is their users' chat.
+    // Only the length: this instance hosts other people's bots, and the text
+    // is their users' chat.
     if (out.text === input.text) {
         logger.debug(
             `Caption rules changed nothing (${input.text.length} chars)`
@@ -85,7 +89,10 @@ async function deliverSingle(
     config: RouteConfig,
     destChatId: number,
     sourceChatId: number,
-    msg: Message
+    msg: Message,
+    onSent: OnSent,
+    // False for the album parts that must not repeat the group's caption.
+    carriesCaption = true
 ) {
     const common = {
         protect_content: config.protectContent,
@@ -99,16 +106,18 @@ async function deliverSingle(
             msg.message_id,
             common
         );
+        onSent(1);
         return;
     }
 
     const buttons = config.removeButtons ? undefined : msg.reply_markup;
 
-    if (!hasCaptionTransform(config)) {
+    if (!hasCaptionTransform(config) || !carriesCaption) {
         await api.copyMessage(destChatId, sourceChatId, msg.message_id, {
             ...common,
             reply_markup: buttons
         });
+        onSent(1);
         return;
     }
 
@@ -121,6 +130,7 @@ async function deliverSingle(
             entities: out.entities,
             reply_markup: buttons
         });
+        onSent(1);
         return;
     }
 
@@ -131,6 +141,7 @@ async function deliverSingle(
         caption_entities: out.entities,
         reply_markup: buttons
     });
+    onSent(1);
 }
 
 async function deliverAlbum(
@@ -138,7 +149,8 @@ async function deliverAlbum(
     config: RouteConfig,
     destChatId: number,
     sourceChatId: number,
-    parts: Message[]
+    parts: Message[],
+    onSent: OnSent
 ) {
     const common = {
         protect_content: config.protectContent,
@@ -146,13 +158,16 @@ async function deliverAlbum(
     };
     const ids = parts.map((p) => p.message_id);
 
+    // Telegram delivers a group whole or not at all, so one report each.
     if (config.mode === "forward") {
         await api.forwardMessages(destChatId, sourceChatId, ids, common);
+        onSent(parts.length);
         return;
     }
 
     if (!hasCaptionTransform(config)) {
         await api.copyMessages(destChatId, sourceChatId, ids, common);
+        onSent(parts.length);
         return;
     }
 
@@ -161,29 +176,41 @@ async function deliverAlbum(
             ...common,
             remove_caption: true
         });
+        onSent(parts.length);
         return;
     }
 
     // Only captioned parts, so an append does not stamp every image.
     const anyCaptioned = parts.some((p) => p.caption);
-    const media = parts.map((part, i) => {
-        const carries = part.caption ? true : !anyCaptioned && i === 0;
-        return toInputMedia(
+    const carries = (part: Message, i: number) =>
+        part.caption ? true : !anyCaptioned && i === 0;
+
+    const media = parts.map((part, i) =>
+        toInputMedia(
             part,
-            carries ? transformed(config, part, CAPTION_LIMIT) : undefined
-        );
-    });
+            carries(part, i)
+                ? transformed(config, part, CAPTION_LIMIT)
+                : undefined
+        )
+    );
 
     const kinds = new Set(
         media.filter((m) => m !== undefined).map((m) => family(m))
     );
 
     if (media.some((m) => m === undefined) || kinds.size > 1) {
-        // Unsupported media, or a mix Telegram would reject.
         // ponytail: loses grouping, keeps config.
         logger.debug("Album cannot be sent as one group, falling back");
-        for (const part of parts) {
-            await deliverSingle(api, config, destChatId, sourceChatId, part);
+        for (const [i, part] of parts.entries()) {
+            await deliverSingle(
+                api,
+                config,
+                destChatId,
+                sourceChatId,
+                part,
+                onSent,
+                carries(part, i)
+            );
         }
         return;
     }
@@ -204,46 +231,111 @@ async function deliverAlbum(
     } else {
         await api.sendMediaGroup(destChatId, group as VisualMedia[], common);
     }
+    onSent(parts.length);
 }
 
-/** One message, or one album, to one destination. */
+/**
+ * One message, or one album, to one destination. Reports as it goes rather than
+ * returning a total, so a partial album keeps what already landed.
+ */
 export async function deliver(
     api: Api,
     route: Route,
     sourceChatId: number,
-    parts: Message[]
+    parts: Message[],
+    onSent: OnSent = () => {}
 ) {
     const config = parseConfig(route.config);
     if (!passes(config, primaryOf(parts))) return;
 
     if (parts.length > 1) {
-        await deliverAlbum(api, config, route.destChatId, sourceChatId, parts);
+        await deliverAlbum(
+            api,
+            config,
+            route.destChatId,
+            sourceChatId,
+            parts,
+            onSent
+        );
     } else {
         await deliverSingle(
             api,
             config,
             route.destChatId,
             sourceChatId,
-            parts[0]
+            parts[0],
+            onSent
         );
     }
 }
 
-/** Failures are isolated per destination. */
 export async function fanOut(
     api: Api,
+    botId: number,
     routes: Route[],
     sourceChatId: number,
     parts: Message[]
 ) {
     for (const route of routes) {
+        const onSent = (n: number) => counted(route.id, n);
         try {
-            await deliver(api, route, sourceChatId, parts);
+            await deliver(api, route, sourceChatId, parts, onSent);
         } catch (error: any) {
             logger.warn(
                 `Forward ${sourceChatId}:${parts[0]?.message_id} -> ` +
                     `${route.destChatId} failed: ${error.description || error.message}`
             );
+            await onFailure(
+                api,
+                botId,
+                route,
+                sourceChatId,
+                parts,
+                error,
+                onSent
+            ).catch((err) =>
+                logger.error(`Could not act on failure: ${err.message}`)
+            );
         }
+    }
+}
+
+async function onFailure(
+    api: Api,
+    botId: number,
+    route: Route,
+    sourceChatId: number,
+    parts: Message[],
+    error: unknown,
+    onSent: OnSent
+) {
+    const verdict = classify(error);
+
+    if (verdict.kind === "permanent") {
+        await db.stopRoute(botId, route.id, verdict.status);
+        logger.info(`Route ${route.id} stopped: ${verdict.status}`);
+        return;
+    }
+
+    if (verdict.kind === "migrate") {
+        // The error names no chat and the send touched both. Only the
+        // destination is this path's to rewrite; a source arrives as a
+        // service message.
+        const check = await checkChatId(
+            api,
+            botId,
+            route.destChatId,
+            "destination"
+        );
+        if (!check.ok || check.chat.id === route.destChatId) return;
+
+        // checkChatId already moved it, so this id is the new one.
+        await deliver(
+            api,
+            { ...route, destChatId: check.chat.id },
+            sourceChatId,
+            parts,
+            onSent
+        );
     }
 }

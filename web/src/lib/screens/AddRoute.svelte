@@ -29,8 +29,8 @@ async function add() {
         // One outcome for the whole flow: two lookups then the create.
         const route = await run(async () => {
             const [from, to] = await Promise.all([
-                api.resolveChat(source.trim()),
-                api.resolveChat(dest.trim())
+                api.resolveChat(source.trim(), "source"),
+                api.resolveChat(dest.trim(), "destination")
             ]);
             return api.createRoute(from.chatId, to.chatId);
         });

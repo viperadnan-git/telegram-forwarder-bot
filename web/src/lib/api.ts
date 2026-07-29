@@ -42,11 +42,11 @@ export type ResolvedChat = {
     type: string;
 };
 
-/** Ids need no round trip; the client short-circuits those. */
-export const resolveChat = (input: string) =>
+/** Ids need no round trip. Only a destination is checked for post rights. */
+export const resolveChat = (input: string, role: "source" | "destination") =>
     request<ResolvedChat>("/resolve", {
         method: "POST",
-        body: JSON.stringify({ input })
+        body: JSON.stringify({ input, role })
     });
 
 export const createRoute = (sourceChatId: number, destChatId: number) =>
@@ -71,7 +71,7 @@ export const refreshChatNames = (chatIds?: number[]) =>
 
 export const updateRoute = (
     id: string,
-    patch: { config?: RouteConfig; enabled?: boolean }
+    patch: { config?: RouteConfig; status?: string }
 ) =>
     request<{ route: Route }>(`/routes/${id}`, {
         method: "PATCH",

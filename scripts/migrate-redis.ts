@@ -98,8 +98,8 @@ async function main() {
         }
     });
 
-    // routes FKs need a chats row first. Redis only had ids, so these get
-    // placeholder names until a refresh.
+    // routes FKs need a chats row first. Redis stored ids and nothing else, so
+    // the name is blank and the type a guess until the owner refreshes.
     const chatIds = new Set<number>();
     for (const r of routeRows) {
         chatIds.add(r.sourceChatId);
@@ -109,7 +109,13 @@ async function main() {
     for (const chunk of chunks([...chatIds], CHUNK)) {
         const inserted = await db
             .insert(chats)
-            .values(chunk.map((chatId) => ({ chatId })))
+            .values(
+                chunk.map((chatId) => ({
+                    chatId,
+                    title: "",
+                    type: "group" as const
+                }))
+            )
             .onConflictDoNothing()
             .returning({ chatId: chats.chatId });
         chatsInserted += inserted.length;

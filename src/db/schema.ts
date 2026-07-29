@@ -1,9 +1,11 @@
 import { sql } from "drizzle-orm";
 import {
     bigint,
-    boolean,
+    check,
+    foreignKey,
     index,
     jsonb,
+    pgEnum,
     pgTable,
     text,
     timestamp,
@@ -11,16 +13,28 @@ import {
     uuid
 } from "drizzle-orm/pg-core";
 import { v7 as uuidv7 } from "uuid";
+import { ROUTE_STATUS, type RouteStatus } from "../schema";
 
 /** Per-destination options; shape lives in config.ts. */
 export type RouteConfig = Record<string, unknown>;
 
-// NOT NULL, so a row always renders as something until a refresh fills it in.
-export const UNNAMED_CHAT = "Unnamed chat";
-export const UNKNOWN_USERNAME = "unknown";
+// Derived from the vocabulary the Mini App reads, so the two cannot drift.
+export const routeStatus = pgEnum(
+    "route_status",
+    Object.keys(ROUTE_STATUS) as [RouteStatus, ...RouteStatus[]]
+);
+
+/** Telegram's own closed set, matching grammY's Chat["type"]. */
+export const chatType = pgEnum("chat_type", [
+    "private",
+    "group",
+    "supergroup",
+    "channel"
+]);
+
+export type ChatType = (typeof chatType.enumValues)[number];
 
 export const bots = pgTable("bots", {
-    // Tokens are deliberately not stored.
     botId: bigint("bot_id", { mode: "number" }).primaryKey(),
     ownerId: bigint("owner_id", { mode: "number" }),
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -28,12 +42,11 @@ export const bots = pgTable("bots", {
         .defaultNow()
 });
 
-/** One row per chat, referenced by routes so a route cannot name an unknown chat. */
 export const chats = pgTable("chats", {
     chatId: bigint("chat_id", { mode: "number" }).primaryKey(),
-    title: text("title").notNull().default(UNNAMED_CHAT),
-    username: text("username").notNull().default(UNKNOWN_USERNAME),
-    type: text("type"),
+    title: text("title").notNull(),
+    username: text("username"),
+    type: chatType("type").notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true })
         .notNull()
         .defaultNow()
@@ -44,17 +57,10 @@ export const routes = pgTable(
     {
         // Generated app-side: native uuidv7() needs Postgres 18.
         id: uuid("id").primaryKey().$defaultFn(uuidv7),
-        botId: bigint("bot_id", { mode: "number" })
-            .notNull()
-            .references(() => bots.botId, { onDelete: "cascade" }),
-        // restrict: deleting a name must not delete routing rules.
-        sourceChatId: bigint("source_chat_id", { mode: "number" })
-            .notNull()
-            .references(() => chats.chatId, { onDelete: "restrict" }),
-        destChatId: bigint("dest_chat_id", { mode: "number" })
-            .notNull()
-            .references(() => chats.chatId, { onDelete: "restrict" }),
-        enabled: boolean("enabled").notNull().default(true),
+        botId: bigint("bot_id", { mode: "number" }).notNull(),
+        sourceChatId: bigint("source_chat_id", { mode: "number" }).notNull(),
+        destChatId: bigint("dest_chat_id", { mode: "number" }).notNull(),
+        status: routeStatus("status").notNull().default("active"),
         config: jsonb("config").$type<RouteConfig>().notNull().default({}),
         createdAt: timestamp("created_at", { withTimezone: true })
             .notNull()
@@ -65,13 +71,51 @@ export const routes = pgTable(
             .defaultNow()
     },
     (t) => [
+        foreignKey({
+            name: "routes_bot_id_fkey",
+            columns: [t.botId],
+            foreignColumns: [bots.botId]
+        }).onDelete("cascade"),
+        // restrict: deleting a name must not delete routing rules.
+        foreignKey({
+            name: "routes_source_chat_id_fkey",
+            columns: [t.sourceChatId],
+            foreignColumns: [chats.chatId]
+        }).onDelete("restrict"),
+        foreignKey({
+            name: "routes_dest_chat_id_fkey",
+            columns: [t.destChatId],
+            foreignColumns: [chats.chatId]
+        }).onDelete("restrict"),
         unique("routes_bot_source_dest_key").on(
             t.botId,
             t.sourceChatId,
             t.destChatId
         ),
-        index("routes_lookup_idx")
+        check(
+            "routes_no_self_forward_check",
+            sql`${t.sourceChatId} <> ${t.destChatId}`
+        ),
+        index("routes_bot_id_source_chat_id_idx")
             .on(t.botId, t.sourceChatId)
-            .where(sql`${t.enabled}`)
+            .where(sql`${t.status} = 'active'`)
+    ]
+);
+
+export const routeStats = pgTable(
+    "route_stats",
+    {
+        routeId: uuid("route_id").primaryKey(),
+        forwarded: bigint("forwarded", { mode: "number" }).notNull().default(0),
+        lastForwardedAt: timestamp("last_forwarded_at", { withTimezone: true })
+            .notNull()
+            .defaultNow()
+    },
+    (t) => [
+        foreignKey({
+            name: "route_stats_route_id_fkey",
+            columns: [t.routeId],
+            foreignColumns: [routes.id]
+        }).onDelete("cascade")
     ]
 );

@@ -7,9 +7,11 @@ import express, {
 import { getBotById } from "../bot";
 import { claimBot, describeBot } from "../clone";
 import { validateConfig } from "../config";
+import { checkChat, checkChatId } from "../forwarding/health";
 import { sourceKeyboard } from "../handlers/pick";
 import logger from "../lib/logger";
-import { resolveChat, resolveUser } from "../lib/utils";
+import { chatTitle, resolveChat, resolveUser } from "../lib/utils";
+import { checkLabel, type RouteStatus } from "../schema";
 import db from "../store";
 import { verifyInitData } from "./auth";
 
@@ -216,14 +218,13 @@ export function createApiRouter(): Router {
                     const chat = await bot.api.getChat(chatId);
                     await db.saveChat({
                         chatId: chat.id,
-                        title: "title" in chat ? chat.title : undefined,
-                        username:
-                            "username" in chat ? chat.username : undefined,
+                        title: chatTitle(chat),
+                        username: chat.username,
                         type: chat.type
                     });
                     updated++;
                 } catch (err: any) {
-                    // Bot removed or chat gone; keep the placeholder.
+                    // Bot removed or chat gone; the stored name stands.
                     logger.debug(
                         `Refresh failed for ${chatId}: ${err.description ?? err.message}`
                     );
@@ -262,8 +263,16 @@ export function createApiRouter(): Router {
             }
 
             const chat = result.chat;
-            const title = "title" in chat ? chat.title : undefined;
-            const username = "username" in chat ? chat.username : undefined;
+            // Same gate the picker uses; the end decides what counts.
+            const role = req.body?.role === "source" ? "source" : "destination";
+            const check = await checkChat(bot.api, req.botId, chat, role);
+            if (!check.ok) {
+                res.status(400).json({ error: checkLabel(check.reason) });
+                return;
+            }
+
+            const title = chatTitle(chat);
+            const username = chat.username;
             await db.saveChat({
                 chatId: chat.id,
                 title,
@@ -297,23 +306,28 @@ export function createApiRouter(): Router {
                 return;
             }
 
-            const route = await db.createRoute(
+            const result = await db.createRoute(
                 req.botId,
                 sourceChatId,
                 destChatId
             );
-            if (!route) {
-                res.status(409).json({ error: "That forward already exists" });
+            if (!result.ok) {
+                const duplicate = result.reason === "duplicate";
+                res.status(duplicate ? 409 : 400).json({
+                    error: duplicate
+                        ? "That forward already exists"
+                        : "Both chats must be resolved before adding"
+                });
                 return;
             }
-            res.status(201).json({ route });
+            res.status(201).json({ route: result.route });
         })
     );
 
     router.patch(
         "/routes/:id",
         asHandler(async (req, res) => {
-            const patch: { config?: any; enabled?: boolean } = {};
+            const patch: { config?: any; status?: RouteStatus } = {};
 
             if (req.body?.config !== undefined) {
                 const result = validateConfig(req.body.config);
@@ -323,12 +337,50 @@ export function createApiRouter(): Router {
                 }
                 patch.config = result.config;
             }
-            if (typeof req.body?.enabled === "boolean") {
-                patch.enabled = req.body.enabled;
+            // A stop reason is the server's to write, not the client's.
+            if (
+                req.body?.status === "active" ||
+                req.body?.status === "paused"
+            ) {
+                patch.status = req.body.status;
             }
             if (Object.keys(patch).length === 0) {
                 res.status(400).json({ error: "Nothing to update" });
                 return;
+            }
+
+            const existing =
+                patch.status === "active"
+                    ? await db.getRoute(req.botId, param(req.params.id))
+                    : undefined;
+
+            // Only on the transition: every save carries a status, and
+            // re-checking a live route costs four Telegram calls.
+            if (existing && existing.status !== "active") {
+                const bot = getBotById(req.botId);
+                if (!bot) {
+                    res.status(503).json({
+                        error: "Send a message to the bot, then try again."
+                    });
+                    return;
+                }
+                for (const [chatId, role] of [
+                    [existing.sourceChatId, "source"],
+                    [existing.destChatId, "destination"]
+                ] as const) {
+                    const check = await checkChatId(
+                        bot.api,
+                        req.botId,
+                        chatId,
+                        role
+                    );
+                    if (!check.ok) {
+                        res.status(409).json({
+                            error: checkLabel(check.reason)
+                        });
+                        return;
+                    }
+                }
             }
 
             const route = await db.updateRoute(

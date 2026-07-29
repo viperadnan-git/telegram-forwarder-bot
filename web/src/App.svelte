@@ -2,7 +2,8 @@
 import { tick } from "svelte";
 import * as api from "./lib/api";
 import { ApiError } from "./lib/api";
-import ConfirmDialog from "./lib/components/ConfirmDialog.svelte";
+import Dialog from "./lib/components/Dialog.svelte";
+import { ask, dialog } from "./lib/dialog.svelte";
 import { run } from "./lib/haptics";
 import {
     back,
@@ -22,14 +23,7 @@ import NoAccess from "./lib/screens/NoAccess.svelte";
 import Owner from "./lib/screens/Owner.svelte";
 import RouteEditor from "./lib/screens/RouteEditor.svelte";
 import Routes from "./lib/screens/Routes.svelte";
-import {
-    backButton,
-    botId,
-    close,
-    confirm,
-    init,
-    onBackButton
-} from "./lib/telegram";
+import { backButton, botId, close, init, onBackButton } from "./lib/telegram";
 import type { Route, RouteConfig } from "./lib/types";
 
 let routes = $state<Route[]>([]);
@@ -57,7 +51,6 @@ const view = $derived(
     loc.name === "route" || loc.name === "add" ? "settings" : loc.name
 );
 let refreshing = $state(false);
-let confirmingRefresh = $state(false);
 let starting = $state(false);
 // The picker is a reply keyboard, which a Mini App cannot render.
 async function startSetFlow() {
@@ -72,9 +65,19 @@ async function startSetFlow() {
     }
 }
 
-/** Scoped to one route: two getChat calls, so no confirmation is warranted. */
+async function confirmRefresh(route: Route) {
+    const ok = await ask(
+        "Refresh chat names?",
+        [
+            "I will ask Telegram for the current name of both chats in this route — the source and the destination.",
+            "Telegram limits how often a bot can do this, so refreshing repeatedly can get the bot temporarily rate limited, which also delays forwarding."
+        ],
+        "Refresh"
+    );
+    if (ok) await refresh(route);
+}
+
 async function refresh(route: Route) {
-    confirmingRefresh = false;
     refreshing = true;
     error = "";
     try {
@@ -136,7 +139,11 @@ onLocation(async (next, scrollY) => {
         loc.name === "route" &&
         next.name !== "route" &&
         editorDirty &&
-        !(await confirm("Discard unsaved changes?"))
+        !(await ask(
+            "Discard unsaved changes?",
+            "Your edits to this destination are not saved yet.",
+            "Discard"
+        ))
     ) {
         push(loc);
         depth = currentDepth();
@@ -182,7 +189,7 @@ async function load() {
     }
 }
 
-async function save(patch: { config: RouteConfig; enabled: boolean }) {
+async function save(patch: { config: RouteConfig; status?: string }) {
     const updated = await run(() => api.updateRoute(editing!.id, patch));
     routes = routes.map((r) =>
         r.id === updated.id ? { ...r, ...updated } : r
@@ -191,7 +198,12 @@ async function save(patch: { config: RouteConfig; enabled: boolean }) {
 }
 
 async function remove() {
-    if (!(await confirm("Delete this destination?"))) return;
+    const ok = await ask(
+        "Delete this destination?",
+        "Deleting leaves the source forwarding to its other destinations.",
+        "Delete"
+    );
+    if (!ok) return;
     await run(() => api.deleteRoute(editing!.id));
     routes = routes.filter((r) => r.id !== editing!.id);
     editorDirty = false;
@@ -258,29 +270,11 @@ else loading = false;
             onclose={back}
             ondelete={remove}
             ondirty={(d) => (editorDirty = d)}
-            onrefresh={() => (confirmingRefresh = true)}
+            onrefresh={() => confirmRefresh(editing)}
             {refreshing}
         />
     {/key}
 
-    {#if confirmingRefresh}
-        <ConfirmDialog
-            title="Refresh chat names?"
-            confirmLabel="Refresh"
-            oncancel={() => (confirmingRefresh = false)}
-            onconfirm={() => refresh(editing)}
-        >
-            <p>
-                I will ask Telegram for the current name of both chats in this
-                route — the source and the destination.
-            </p>
-            <p>
-                Telegram limits how often a bot can do this, so refreshing
-                repeatedly can get the bot temporarily rate limited, which also
-                delays forwarding.
-            </p>
-        </ConfirmDialog>
-    {/if}
 {/if}
 
 {#if manual}
@@ -291,4 +285,20 @@ else loading = false;
             back();
         }}
     />
+{/if}
+
+<!-- One dialog for the app, last so it sits over every screen. -->
+{#if dialog.current}
+    <Dialog
+        title={dialog.current.title}
+        confirmLabel={dialog.current.confirmLabel}
+        oncancel={dialog.current.cancellable
+            ? () => dialog.current?.settle(false)
+            : undefined}
+        onconfirm={() => dialog.current?.settle(true)}
+    >
+        {#each dialog.current.body as paragraph}
+            <p>{paragraph}</p>
+        {/each}
+    </Dialog>
 {/if}

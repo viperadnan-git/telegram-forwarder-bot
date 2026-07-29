@@ -11,6 +11,7 @@ import { webhookCallback } from "grammy";
 import packageJson from "../package.json";
 import { createApiRouter, param } from "./api";
 import { botCreator, bots, WEBHOOK_HOST } from "./bot";
+import { flush, startCounter } from "./forwarding/counter";
 import logger from "./lib/logger";
 
 const app = express();
@@ -102,6 +103,14 @@ app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
             status === 500 ? "internal error" : (err?.message ?? "bad request")
     });
 });
+
+startCounter();
+// An ordinary restart loses nothing; only a hard crash costs a window.
+for (const signal of ["SIGTERM", "SIGINT"] as const) {
+    process.once(signal, () => {
+        flush().finally(() => process.exit(0));
+    });
+}
 
 app.listen(PORT, HOST, async () => {
     logger.info(`Listening on port http://${HOST}:${PORT}`);

@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { Api } from "grammy";
 import {
+    chatTitle,
     escapeHtml,
     formatObject,
     resolveChat,
@@ -147,5 +148,36 @@ describe("resolveChat", () => {
             "https://t.me/+abcdef"
         );
         expect(result.ok).toBe(false);
+    });
+});
+
+describe("chatTitle", () => {
+    test("uses the title of a group or channel", () => {
+        expect(
+            chatTitle({ id: -100, type: "channel", title: "News" } as any)
+        ).toBe("News");
+    });
+
+    test("falls back to a person's name, which has no title", () => {
+        expect(
+            chatTitle({
+                id: 7,
+                type: "private",
+                first_name: "Ada",
+                last_name: "Lovelace"
+            } as any)
+        ).toBe("Ada Lovelace");
+    });
+
+    test("handles a first name on its own", () => {
+        expect(
+            chatTitle({ id: 7, type: "private", first_name: "Ada" } as any)
+        ).toBe("Ada");
+    });
+
+    test("uses the supergroup title", () => {
+        expect(
+            chatTitle({ id: -100, type: "supergroup", title: "Chat" } as any)
+        ).toBe("Chat");
     });
 });

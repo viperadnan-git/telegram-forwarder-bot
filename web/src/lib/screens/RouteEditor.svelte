@@ -4,11 +4,12 @@ import {
     defaultConfig,
     isBlankReplacement,
     isBlankRule,
+    isStopped,
     pruneConfig,
     replacementIssue,
-    ruleIssue
+    ruleIssue,
+    statusLabel
 } from "$schema";
-import ConfirmDialog from "../components/ConfirmDialog.svelte";
 import Hero from "../components/Hero.svelte";
 import Icon from "../components/Icon.svelte";
 import RouteLink from "../components/RouteLink.svelte";
@@ -16,6 +17,7 @@ import RulePane from "../components/RulePane.svelte";
 import Segmented from "../components/Segmented.svelte";
 import Sheet from "../components/Sheet.svelte";
 import Switch from "../components/Switch.svelte";
+import { alert, ask } from "../dialog.svelte";
 import type { Pane } from "../router";
 import {
     type Route,
@@ -38,7 +40,7 @@ let {
     route: Route;
     pane: Pane | null;
     onpane: (pane: Pane | null) => void;
-    onsave: (patch: { config: RouteConfig; enabled: boolean }) => Promise<void>;
+    onsave: (patch: { config: RouteConfig; status?: string }) => Promise<void>;
     onclose: () => void;
     ondelete: () => Promise<void>;
     ondirty: (dirty: boolean) => void;
@@ -49,25 +51,25 @@ let {
 // Seeded once, deliberately non-reactively: the parent keys this component on
 // route.id, so a different route remounts rather than reusing this state.
 let config = $state<RouteConfig>(untrack(() => withDefaults(route.config)));
-let enabled = $state(untrack(() => route.enabled));
+const openedActive = untrack(() => route.status === "active");
+let active = $state(openedActive);
 let saving = $state(false);
-let confirmingReset = $state(false);
 
 // The baseline this screen opened with, so backing out can warn before
 // discarding edits. An empty box and an absent field are the same stored
 // config, so typing a character and deleting it is not an edit.
-const fingerprint = (config: RouteConfig, enabled: boolean) =>
-    JSON.stringify({ config, enabled }, (_, v) => (v === "" ? undefined : v));
+const fingerprint = (config: RouteConfig, active: boolean) =>
+    JSON.stringify({ config, active }, (_, v) => (v === "" ? undefined : v));
 
 const opened = untrack(() =>
-    fingerprint(withDefaults(route.config), route.enabled)
+    fingerprint(withDefaults(route.config), openedActive)
 );
-const dirty = $derived(
-    fingerprint($state.snapshot(config), enabled) !== opened
-);
+const dirty = $derived(fingerprint($state.snapshot(config), active) !== opened);
 
 $effect(() => ondirty(dirty));
-let error = $state("");
+
+// Stopped by a failure, not paused by the owner.
+const stopped = $derived(isStopped(route.status));
 
 // Surfaced here so the save does not fail server-side instead.
 const transforms = $derived(
@@ -96,28 +98,38 @@ const badReplacements = $derived(
 );
 const incomplete = $derived(badRules + badReplacements > 0);
 
-// Deliberately leaves `enabled` alone: resuming a paused destination would
+// Deliberately leaves the status alone: resuming a paused destination would
 // start delivering messages, which is not what "reset the settings" implies.
 const isDefault = $derived(
     JSON.stringify($state.snapshot(config)) === JSON.stringify(defaultConfig())
 );
 
-function reset() {
-    confirmingReset = false;
-    config = defaultConfig();
+async function reset() {
+    const ok = await ask(
+        "Reset to defaults?",
+        [
+            "Every filter and caption rule on this destination is cleared, and delivery goes back to a plain copy.",
+            "Nothing is saved until you tap Save, so you can still back out."
+        ],
+        "Reset"
+    );
+    if (ok) config = defaultConfig();
 }
 
 async function save() {
     saving = true;
-    error = "";
     try {
         await onsave({
             config: pruneConfig($state.snapshot(config) as RouteConfig),
-            enabled
+            // Only when the switch moved: sending "paused" for an untouched
+            // stopped route would overwrite why it stopped.
+            ...(active === openedActive
+                ? {}
+                : { status: active ? "active" : "paused" })
         });
         onclose();
     } catch (e: any) {
-        error = e.message;
+        await alert("Could not save", e.message);
     } finally {
         saving = false;
     }
@@ -151,12 +163,14 @@ const addedText = $derived(
 <Sheet title="Destination" onback={onclose} action={saveAction}>
     <Hero
         icon="forward"
-        muted={!enabled}
+        muted={!active}
         title={String(route.destName || route.destChatId)}
     >
-        {#if enabled}
+        {#if active}
             Receiving new messages from
             <b>{route.sourceName || route.sourceChatId}</b>
+        {:else if stopped}
+            Stopped — {statusLabel(route.status)}
         {:else}
             Paused — nothing is being sent here
         {/if}
@@ -189,14 +203,36 @@ const addedText = $derived(
     {/if}
 
     <h2 class="section-title">Status</h2>
+    {#if stopped}
+        <p class="banner">
+            I stopped this forward: {statusLabel(route.status)}. Fix it in
+            Telegram, then turn it back on — I check again before resuming.
+        </p>
+    {/if}
     <div class="card">
         <Switch
-            bind:checked={enabled}
+            bind:checked={active}
             label="Forwarding active"
-            sub={enabled
+            sub={active
                 ? "New messages are copied to this destination"
-                : "Paused — nothing is sent to this destination"}
+                : stopped
+                  ? "Stopped after a delivery failure"
+                  : "Paused — nothing is sent to this destination"}
         />
+        <div class="row">
+            <span class="grow">
+                <span class="row-label">
+                    {route.forwarded
+                        ? `Last delivery ${relativeTime(route.lastForwardedAt ?? undefined)}`
+                        : "No deliveries yet"}
+                </span>
+                {#if route.forwarded}
+                    <span class="sub">
+                        {route.forwarded.toLocaleString()} forwarded in total
+                    </span>
+                {/if}
+            </span>
+        </div>
     </div>
 
     <h2 class="section-title">Delivery</h2>
@@ -338,7 +374,7 @@ const addedText = $derived(
         </p>
     {/if}
 
-    {#if error}<p class="banner">{error}</p>{/if}
+
 
     <h2 class="section-title">Actions</h2>
     <div class="card inset-rules">
@@ -359,7 +395,7 @@ const addedText = $derived(
             type="button"
             class="row"
             disabled={isDefault || saving}
-            onclick={() => (confirmingReset = true)}
+            onclick={reset}
         >
             <span class="icon"><Icon name="undo" /></span>
             <span class="grow">
@@ -377,21 +413,6 @@ const addedText = $derived(
     Deleting leaves the source forwarding to its other destinations.
     </p>
 </Sheet>
-
-{#if confirmingReset}
-    <ConfirmDialog
-        title="Reset to defaults?"
-        confirmLabel="Reset"
-        oncancel={() => (confirmingReset = false)}
-        onconfirm={reset}
-    >
-        <p>
-            Every filter and caption rule on this destination is cleared, and
-            delivery goes back to a plain copy.
-        </p>
-        <p>Nothing is saved until you tap Save, so you can still back out.</p>
-    </ConfirmDialog>
-{/if}
 
 {#if pane}
     <RulePane {pane} bind:config onclose={() => onpane(null)} />

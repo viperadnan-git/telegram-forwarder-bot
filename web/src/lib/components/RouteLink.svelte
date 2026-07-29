@@ -1,5 +1,5 @@
 <script lang="ts">
-import type { Route } from "../types";
+import { isStopped, type Route } from "../types";
 import Avatar from "./Avatar.svelte";
 import CopyId from "./CopyId.svelte";
 
@@ -32,7 +32,7 @@ let {
 
     {#each routes as route, i (route.id)}
         {@const tags = chips?.(route) ?? []}
-        <div class="link-dest" class:paused={!route.enabled}>
+        <div class="link-dest" class:paused={route.status !== "active"}>
             {#if onopen}
                 <!-- Covers the row so any part of it opens, except the id. -->
                 <button
@@ -53,9 +53,13 @@ let {
                     {route.destName || "Unnamed chat"}
                 </span>
                 <CopyId id={route.destChatId} />
-                {#if !route.enabled || tags.length}
+                {#if route.status !== "active" || tags.length}
                     <span class="chips">
-                        {#if !route.enabled}<span class="chip off">paused</span>{/if}
+                        {#if isStopped(route.status)}
+                            <span class="chip stopped">stopped</span>
+                        {:else if route.status === "paused"}
+                            <span class="chip off">paused</span>
+                        {/if}
                         {#each tags as tag}<span class="chip">{tag}</span>{/each}
                     </span>
                 {/if}

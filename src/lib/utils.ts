@@ -1,5 +1,5 @@
 import type { Api } from "grammy";
-import type { ChatFullInfo } from "grammy/types";
+import type { Chat, ChatFullInfo } from "grammy/types";
 import { parseChatRef } from "./chatref";
 
 /** Renders a source and its destinations as a tree, for /get. */
@@ -21,6 +21,12 @@ export const formatObject = (obj: {
 /** Every reply is HTML, so unescaped user text makes Telegram reject it. */
 export const escapeHtml = (text: string): string =>
     text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+/** Always non-empty: the union requires title on groups, first_name on private. */
+export const chatTitle = (chat: Chat | ChatFullInfo): string =>
+    chat.type === "private"
+        ? [chat.first_name, chat.last_name].filter(Boolean).join(" ")
+        : chat.title;
 
 export type ResolveResult =
     | { ok: true; chat: ChatFullInfo }
